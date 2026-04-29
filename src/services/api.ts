@@ -96,7 +96,7 @@ export const apiService = {
   },
 
   removeItemFromOrder: async (orderId: number, itemId: number): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/remove_item/`, {
+    const response = await api.post(`/orders/${orderId}/remove_item_legacy/`, {
       item_id: itemId,
     });
     return response.data;
@@ -187,7 +187,7 @@ export const apiService = {
     itemId: number,
     action: 'increase' | 'decrease'
   ): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/update_item/`, {
+    const response = await api.post(`/orders/${orderId}/update_item_legacy/`, {
       item_id: itemId,
       action,
     });
