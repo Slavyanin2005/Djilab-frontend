@@ -9,25 +9,28 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: true, // Обязательно для отправки кук
 });
 
-// Перехватчик для добавления CSRF-токена
 api.interceptors.request.use((config) => {
-  const csrfToken = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('csrftoken='))
-    ?.split('=')[1];
+  // Пробуем найти токен по имени из настроек Django
+  const csrfToken =
+    document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('djilab_csrftoken='))
+      ?.split('=')[1] ||
+    document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('csrftoken='))
+      ?.split('=')[1];
 
-  if (csrfToken) {
+  if (csrfToken && config.method?.toLowerCase() !== 'get') {
     config.headers['X-CSRFToken'] = csrfToken;
   }
   return config;
 });
 
 export const apiService = {
-  // ==================== УСЛУГИ ====================
-
   getServices: async (params?: {
     search?: string;
     ordering?: string;
@@ -49,8 +52,6 @@ export const apiService = {
     return response.data;
   },
 
-  // ==================== ЗАЯВКИ (ОСНОВНЫЕ) ====================
-
   getOrders: async (params?: {
     status?: string;
     date_from?: string;
@@ -65,14 +66,10 @@ export const apiService = {
     return response.data;
   },
 
-  // ==================== КОРЗИНА ====================
-
   getCartIcon: async (): Promise<{ id: number | null; items_count: number }> => {
     const response = await api.get('/orders/cart_icon/');
     return response.data;
   },
-
-  // ==================== ПОЗИЦИИ ЗАЯВКИ (M2M без PK) ====================
 
   addItemToOrder: async (
     orderId: number,
@@ -86,9 +83,12 @@ export const apiService = {
     return response.data;
   },
 
-  updateItemInOrder: async (orderId: number, itemId: number, quantity: number): Promise<Order> => {
-    const action = quantity > 1 ? 'increase' : 'decrease';
-    const response = await api.post(`/orders/${orderId}/update_item/`, {
+  updateQuantity: async (
+    orderId: number,
+    itemId: number,
+    action: 'increase' | 'decrease'
+  ): Promise<Order> => {
+    const response = await api.post(`/orders/${orderId}/update_item_legacy/`, {
       item_id: itemId,
       action,
     });
@@ -101,8 +101,6 @@ export const apiService = {
     });
     return response.data;
   },
-
-  // ==================== СТАТУСЫ ЗАЯВКИ ====================
 
   formOrder: async (orderId: number): Promise<Order> => {
     const response = await api.put(`/orders/${orderId}/form/`);
@@ -127,8 +125,6 @@ export const apiService = {
     return response.data;
   },
 
-  // ==================== ПОЛЬЗОВАТЕЛЬ ====================
-
   getProfile: async (): Promise<UserProfile | null> => {
     try {
       const response = await api.get('/profiles/');
@@ -149,9 +145,9 @@ export const apiService = {
     }
   },
 
-  login: async (username: string): Promise<AuthResponse> => {
+  login: async (username: string, password: string): Promise<AuthResponse> => {
     try {
-      const response = await api.post('/profiles/login/', { username });
+      const response = await api.post('/profiles/login/', { username, password });
       return response.data;
     } catch (error) {
       const err = error as AxiosError;
@@ -171,7 +167,16 @@ export const apiService = {
     }
   },
 
-  // ==================== 🔙 ОБРАТНАЯ СОВМЕСТИМОСТЬ (алиасы) ====================
+  getCurrentUser: async (): Promise<AuthResponse> => {
+    try {
+      const response = await api.get('/profiles/me/');
+      return response.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error('Get user error:', err.response?.data || err.message || error);
+      throw error;
+    }
+  },
 
   createOrder: async (): Promise<Order> => {
     return { id: null as unknown as number, items_count: 0, status: 'draft', total: '0' } as Order;
@@ -179,18 +184,6 @@ export const apiService = {
 
   addToOrder: async (_orderId: number, serviceId: number, quantity: number = 1): Promise<Order> => {
     const response = await api.post(`/services/${serviceId}/add_to_order/`, { quantity });
-    return response.data;
-  },
-
-  updateQuantity: async (
-    orderId: number,
-    itemId: number,
-    action: 'increase' | 'decrease'
-  ): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/update_item_legacy/`, {
-      item_id: itemId,
-      action,
-    });
     return response.data;
   },
 
