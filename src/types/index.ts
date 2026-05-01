@@ -25,9 +25,18 @@ export interface RegisterData {
   last_name?: string;
 }
 
-// ✅ Интерфейс ответа авторизации
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  is_staff: boolean;
+}
+
 export interface AuthResponse {
-  message: string;
+  message?: string;
+  username?: string;
+  id?: number;
+  is_staff?: boolean;
   token?: string;
 }
 

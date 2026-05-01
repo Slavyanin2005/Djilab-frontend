@@ -5,6 +5,8 @@ import { ProductCard } from '../components/ProductCard';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useCartContext } from '../hooks/useCartContext';
+import { useAuth } from '../hooks/useAuth'; // ✅ 1. Импортируем хук
+import { AuthModal } from '../components/AuthModal'; // ✅ 2. Импортируем модалку
 import '../index.css';
 
 export const Home: React.FC = () => {
@@ -14,11 +16,15 @@ export const Home: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { refreshCart } = useCartContext();
 
+  // ✅ 3. Состояния авторизации и модального окна
+  const { isAuthenticated } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingServiceId, setPendingServiceId] = useState<number | null>(null);
+
   useEffect(() => {
     loadServices();
   }, []);
 
-  // ✅ Оборачиваем filterServices в useCallback
   const filterServices = useCallback(() => {
     if (!searchQuery.trim()) {
       setFilteredServices(services);
@@ -32,11 +38,11 @@ export const Home: React.FC = () => {
         service.description.toLowerCase().includes(query)
     );
     setFilteredServices(filtered);
-  }, [searchQuery, services]); // ← Зависимости
+  }, [searchQuery, services]);
 
   useEffect(() => {
     filterServices();
-  }, [filterServices]); // ← Теперь зависимость стабильная
+  }, [filterServices]);
 
   const loadServices = async () => {
     try {
@@ -50,15 +56,14 @@ export const Home: React.FC = () => {
     }
   };
 
-  const handleAddToCart = async (serviceId: number) => {
+  // ✅ 4. Логика добавления (вынесена отдельно)
+  const executeAddToCart = async (serviceId: number) => {
     try {
       const orders = await apiService.getOrders();
       let order = orders.find((o) => o.status === 'draft');
-
       if (!order) {
         order = await apiService.createOrder();
       }
-
       await apiService.addToOrder(order.id, serviceId, 1);
       await refreshCart();
     } catch (error) {
@@ -66,9 +71,39 @@ export const Home: React.FC = () => {
     }
   };
 
+  // ✅ 5. Обработчик клика (проверка авторизации)
+  const handleAddToCart = async (serviceId: number) => {
+    if (!isAuthenticated) {
+      // Если не вошел -> запоминаем товар и открываем окно
+      setPendingServiceId(serviceId);
+      setShowAuthModal(true);
+      return;
+    }
+    // Если вошел -> добавляем сразу
+    await executeAddToCart(serviceId);
+  };
+
+  // ✅ 6. Что делать после успешного входа
+  const handleAuthSuccess = async () => {
+    if (pendingServiceId !== null) {
+      await executeAddToCart(pendingServiceId);
+      setPendingServiceId(null); // Очищаем
+    }
+  };
+
   return (
     <div>
       <Header />
+      {/* ✅ 7. Рендерим модалку, если нужно */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => {
+            setShowAuthModal(false);
+            setPendingServiceId(null);
+          }}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
 
       <section className="hero">
         <div className="hero-content">
@@ -83,12 +118,10 @@ export const Home: React.FC = () => {
           </a>
         </div>
       </section>
-
       <main className="container">
         <h2 className="section-title" id="catalog">
           Каталог
         </h2>
-
         <div className="search-wrapper">
           <form className="search-form" onSubmit={(e) => e.preventDefault()}>
             <input
@@ -113,7 +146,6 @@ export const Home: React.FC = () => {
             </button>
           </form>
         </div>
-
         {loading ? (
           <p style={{ textAlign: 'center', padding: '60px' }}>Загрузка...</p>
         ) : filteredServices.length > 0 ? (
@@ -131,7 +163,6 @@ export const Home: React.FC = () => {
           </div>
         )}
       </main>
-
       <Footer />
     </div>
   );
