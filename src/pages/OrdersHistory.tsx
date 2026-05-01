@@ -4,14 +4,15 @@ import type { Order } from '../types';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useCartContext } from '../hooks/useCartContext';
+import { useAuth } from '../hooks/useAuth';
 import '../index.css';
 
 export const OrdersHistory: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const { refreshCart } = useCartContext();
+  const { user } = useAuth();
 
-  // ✅ Оборачиваем loadOrders в useCallback
   const loadOrders = useCallback(async () => {
     try {
       const data = await apiService.getOrders();
@@ -22,11 +23,11 @@ export const OrdersHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]); // ← Зависимость: refreshCart
+  }, [refreshCart]);
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders]); // ← Теперь зависимость стабильная
+  }, [loadOrders]);
 
   const getStatusClass = (status: string): string => {
     const classes: { [key: string]: string } = {
@@ -54,10 +55,9 @@ export const OrdersHistory: React.FC = () => {
   return (
     <div>
       <Header />
-
       <main className="container">
         <div className="cart-page">
-          <h1 className="section-title">Мои заявки</h1>
+          <h1 className="section-title">{user?.is_staff ? 'Все заявки системы' : 'Мои заявки'}</h1>
 
           {orders.length > 0 ? (
             <div className="cart-content">
@@ -66,10 +66,10 @@ export const OrdersHistory: React.FC = () => {
                   <tr>
                     <th>№ Заявки</th>
                     <th>Дата создания</th>
+                    <th>Создатель</th>
                     <th>Статус</th>
                     <th>Товаров</th>
                     <th>Сумма</th>
-                    <th>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -80,6 +80,10 @@ export const OrdersHistory: React.FC = () => {
                       </td>
                       <td>{new Date(order.created_at).toLocaleString('ru-RU')}</td>
                       <td>
+                        {/* ✅ Теперь просто имя, без проверки на "Вы" */}
+                        {order.creator ? order.creator.username : 'Неизвестно'}
+                      </td>
+                      <td>
                         <span className={getStatusClass(order.status)}>
                           {order.status_display || order.status}
                         </span>
@@ -87,21 +91,6 @@ export const OrdersHistory: React.FC = () => {
                       <td>{order.items_count} шт.</td>
                       <td>
                         <strong>{order.total} ₽</strong>
-                      </td>
-                      <td>
-                        {order.status === 'draft' ? (
-                          <a
-                            href="/cart"
-                            className="btn-primary"
-                            style={{ padding: '8px 16px', fontSize: '0.9rem' }}
-                          >
-                            Открыть
-                          </a>
-                        ) : (
-                          <span style={{ color: 'var(--light-gray)', fontSize: '0.9rem' }}>
-                            Просмотр
-                          </span>
-                        )}
                       </td>
                     </tr>
                   ))}
@@ -123,7 +112,6 @@ export const OrdersHistory: React.FC = () => {
           )}
         </div>
       </main>
-
       <Footer />
     </div>
   );

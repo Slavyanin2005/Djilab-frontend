@@ -1,5 +1,6 @@
-import { AxiosError } from 'axios';
 import { useState } from 'react';
+import { createPortal } from 'react-dom'; // ✅ Импорт Portal
+import { AxiosError } from 'axios';
 import { useAuth } from '../hooks/useAuth';
 
 interface AuthModalProps {
@@ -11,7 +12,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
 
-  // Поля формы
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,14 +34,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       const axiosErr = err as AxiosError;
-      const msg = axiosErr.response?.data || 'Ошибка авторизации';
-      setError(typeof msg === 'object' ? JSON.stringify(msg) : String(msg));
+      const msg = axiosErr.response?.data;
+
+      if (typeof msg === 'object' && msg !== null) {
+        const errors = Object.entries(msg)
+          .map(
+            ([field, messages]) =>
+              `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
+          )
+          .join('; ');
+        setError(errors);
+      } else {
+        setError((msg as string) || 'Ошибка авторизации');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  return (
+  // ✅ Используем createPortal, чтобы рендерить окно в body
+  return createPortal(
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <button style={styles.closeBtn} onClick={onClose}>
@@ -104,11 +116,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           </button>
         </p>
       </div>
-    </div>
+    </div>,
+    document.body // ✅ Рендерим прямо в body, поверх всего
   );
 };
 
-// ... (Стили остаются такими же, как я присылал ранее)
 const styles: { [key: string]: React.CSSProperties } = {
   overlay: {
     position: 'fixed',
@@ -121,6 +133,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 9999,
+    backdropFilter: 'blur(4px)',
   },
   modal: {
     background: 'var(--bg)',
@@ -130,6 +143,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: '400px',
     position: 'relative',
     boxShadow: 'var(--shadow)',
+    margin: '20px',
   },
   closeBtn: {
     position: 'absolute',
@@ -141,7 +155,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     color: 'var(--gray)',
   },
-  title: { marginBottom: '24px', textAlign: 'center', color: 'var(--dark)' },
+  title: {
+    marginBottom: '24px',
+    textAlign: 'center',
+    color: 'var(--dark)',
+  },
   error: {
     background: 'var(--error)',
     color: 'white',
@@ -151,7 +169,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: 'center',
     fontSize: '0.9rem',
   },
-  form: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
   input: {
     padding: '14px',
     border: '1px solid var(--border)',
@@ -169,7 +191,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     marginTop: '8px',
   },
-  switchText: { marginTop: '20px', textAlign: 'center', color: 'var(--gray)' },
+  switchText: {
+    marginTop: '20px',
+    textAlign: 'center',
+    color: 'var(--gray)',
+  },
   switchBtn: {
     background: 'none',
     border: 'none',
