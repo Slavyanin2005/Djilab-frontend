@@ -1,29 +1,43 @@
-import { useEffect, useState, useCallback } from 'react';
+// src/pages/OrdersHistory.tsx
+import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
-import type { Order } from '../types';
+import type { Order, User } from '../types';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
-import { useCartContext } from '../hooks/useCartContext';
-import { useAuth } from '../hooks/useAuth';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import '../index.css';
 
-export const OrdersHistory: React.FC = () => {
+interface OrdersHistoryProps {
+  user: User | null;
+  cartCount: number;
+  onLogout: () => Promise<void>;
+  onCartChange?: () => Promise<void>;
+}
+
+export const OrdersHistory: React.FC<OrdersHistoryProps> = ({
+  user,
+  cartCount,
+  onLogout,
+  onCartChange,
+}) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const { refreshCart } = useCartContext();
-  const { user } = useAuth();
 
   const loadOrders = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await apiService.getOrders();
       setOrders(data);
-      await refreshCart();
+      await onCartChange?.();
     } catch (error) {
       console.error('Failed to load orders:', error);
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, [user, onCartChange]); // ← Добавили onCartChange
 
   useEffect(() => {
     loadOrders();
@@ -43,7 +57,7 @@ export const OrdersHistory: React.FC = () => {
   if (loading) {
     return (
       <div>
-        <Header />
+        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
@@ -54,11 +68,13 @@ export const OrdersHistory: React.FC = () => {
 
   return (
     <div>
-      <Header />
+      <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+      <div className="container" style={{ paddingTop: '20px' }}>
+        <Breadcrumbs />
+      </div>
       <main className="container">
         <div className="cart-page">
           <h1 className="section-title">{user?.is_staff ? 'Все заявки системы' : 'Мои заявки'}</h1>
-
           {orders.length > 0 ? (
             <div className="cart-content">
               <table className="cart-table">
@@ -79,10 +95,7 @@ export const OrdersHistory: React.FC = () => {
                         <strong>#{order.id}</strong>
                       </td>
                       <td>{new Date(order.created_at).toLocaleString('ru-RU')}</td>
-                      <td>
-                        {/* ✅ Теперь просто имя, без проверки на "Вы" */}
-                        {order.creator ? order.creator.username : 'Неизвестно'}
-                      </td>
+                      <td>{order.creator ? order.creator.username : 'Неизвестно'}</td>
                       <td>
                         <span className={getStatusClass(order.status)}>
                           {order.status_display || order.status}

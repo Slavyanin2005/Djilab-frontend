@@ -1,17 +1,22 @@
+// src/components/AuthModal.tsx
 import { useState } from 'react';
-import { createPortal } from 'react-dom'; // ✅ Импорт Portal
+import { createPortal } from 'react-dom';
 import { AxiosError } from 'axios';
-import { useAuth } from '../hooks/useAuth';
 
 interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  onLogin: (username: string, password: string) => Promise<void>;
+  onRegister: (data: { username: string; email: string; password: string }) => Promise<void>;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
-  const { login, register } = useAuth();
+export const AuthModal: React.FC<AuthModalProps> = ({
+  onClose,
+  onSuccess,
+  onLogin,
+  onRegister,
+}) => {
   const [isLogin, setIsLogin] = useState(true);
-
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,13 +30,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
 
     try {
       if (isLogin) {
-        await login(username, password);
+        await onLogin(username, password);
       } else {
-        await register({ username, email, password });
+        await onRegister({ username, email, password });
       }
-
       onSuccess();
-      onClose();
     } catch (err) {
       const axiosErr = err as AxiosError;
       const msg = axiosErr.response?.data;
@@ -52,7 +55,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
     }
   };
 
-  // ✅ Используем createPortal, чтобы рендерить окно в body
   return createPortal(
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -117,7 +119,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         </p>
       </div>
     </div>,
-    document.body // ✅ Рендерим прямо в body, поверх всего
+    document.body
   );
 };
 

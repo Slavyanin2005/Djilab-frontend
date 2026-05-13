@@ -1,50 +1,43 @@
-import { useEffect, useState, useCallback } from 'react';
+// src/pages/Home.tsx
+import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
-import type { Service } from '../types';
+import type { Service, User } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
-import { useCartContext } from '../hooks/useCartContext';
-import { useAuth } from '../hooks/useAuth'; // ✅ 1. Импортируем хук
-import { AuthModal } from '../components/AuthModal'; // ✅ 2. Импортируем модалку
+import { Breadcrumbs } from '../components/Breadcrumbs';
+import { AuthModal } from '../components/AuthModal';
 import '../index.css';
 
-export const Home: React.FC = () => {
+interface HomeProps {
+  user: User | null;
+  cartCount: number;
+  onLogin: (username: string, password: string) => Promise<void>;
+  onRegister: (data: { username: string; email: string; password: string }) => Promise<void>;
+  onLogout: () => Promise<void>;
+  onCartChange?: () => Promise<void>;
+}
+
+export const Home: React.FC<HomeProps> = ({
+  user,
+  cartCount,
+  onLogin,
+  onRegister,
+  onLogout,
+  onCartChange,
+}) => {
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { refreshCart } = useCartContext();
 
-  // ✅ 3. Состояния авторизации и модального окна
-  const { isAuthenticated } = useAuth();
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingServiceId, setPendingServiceId] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadServices();
-  }, []);
-
-  const filterServices = useCallback(() => {
-    if (!searchQuery.trim()) {
-      setFilteredServices(services);
-      return;
-    }
-    const query = searchQuery.toLowerCase();
-    const filtered = services.filter(
-      (service) =>
-        service.name.toLowerCase().includes(query) ||
-        service.category.toLowerCase().includes(query) ||
-        service.description.toLowerCase().includes(query)
-    );
-    setFilteredServices(filtered);
-  }, [searchQuery, services]);
-
-  useEffect(() => {
-    filterServices();
-  }, [filterServices]);
-
-  const loadServices = async () => {
+  const loadServices = useCallback(async (): Promise<void> => {
     try {
       const data = await apiService.getServices();
       setServices(data);
@@ -54,47 +47,86 @@ export const Home: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ✅ 4. Логика добавления (вынесена отдельно)
-  const executeAddToCart = async (serviceId: number) => {
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
+
+  const filterServices = useCallback((): void => {
+    let filtered = [...services];
+
+    // 🔍 Фильтр по поиску
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (service) =>
+          service.name.toLowerCase().includes(query) ||
+          service.category.toLowerCase().includes(query) ||
+          service.description.toLowerCase().includes(query)
+      );
+    }
+
+    const min = minPrice ? parseFloat(minPrice) : null;
+    const max = maxPrice ? parseFloat(maxPrice) : null;
+
+    if (min !== null || max !== null) {
+      filtered = filtered.filter((service) => {
+        const price = parseFloat(service.price);
+        if (min !== null && price < min) return false;
+        if (max !== null && price > max) return false;
+        return true;
+      });
+    }
+
+    setFilteredServices(filtered);
+  }, [searchQuery, minPrice, maxPrice, services]);
+
+  useEffect(() => {
+    filterServices();
+  }, [filterServices]);
+
+  const executeAddToCart = async (serviceId: number): Promise<void> => {
     try {
-      const orders = await apiService.getOrders();
-      let order = orders.find((o) => o.status === 'draft');
-      if (!order) {
-        order = await apiService.createOrder();
-      }
-      await apiService.addToOrder(order.id, serviceId, 1);
-      await refreshCart();
+      await apiService.addToOrder(serviceId, 1);
+      await onCartChange?.();
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }
   };
 
-  // ✅ 5. Обработчик клика (проверка авторизации)
-  const handleAddToCart = async (serviceId: number) => {
-    if (!isAuthenticated) {
-      // Если не вошел -> запоминаем товар и открываем окно
+  const handleAddToCart = async (serviceId: number): Promise<void> => {
+    if (!user) {
       setPendingServiceId(serviceId);
       setShowAuthModal(true);
       return;
     }
-    // Если вошел -> добавляем сразу
     await executeAddToCart(serviceId);
   };
 
-  // ✅ 6. Что делать после успешного входа
-  const handleAuthSuccess = async () => {
+  const handleAuthSuccess = async (): Promise<void> => {
     if (pendingServiceId !== null) {
       await executeAddToCart(pendingServiceId);
-      setPendingServiceId(null); // Очищаем
+      setPendingServiceId(null);
     }
+    setShowAuthModal(false);
+    await onCartChange?.();
   };
+
+  const handleAuthRequired = (): void => {
+    setShowAuthModal(true);
+  };
+
+  const resetFilters = (): void => {
+    setSearchQuery('');
+    setMinPrice('');
+    setMaxPrice('');
+  };
+
+  const hasActiveFilters = searchQuery.trim() || minPrice || maxPrice;
 
   return (
     <div>
-      <Header />
-      {/* ✅ 7. Рендерим модалку, если нужно */}
       {showAuthModal && (
         <AuthModal
           onClose={() => {
@@ -102,8 +134,21 @@ export const Home: React.FC = () => {
             setPendingServiceId(null);
           }}
           onSuccess={handleAuthSuccess}
+          onLogin={onLogin}
+          onRegister={onRegister}
         />
       )}
+
+      <Header
+        user={user}
+        cartCount={cartCount}
+        onLogout={onLogout}
+        onAuthRequired={handleAuthRequired}
+      />
+
+      <div className="container" style={{ paddingTop: '20px' }}>
+        <Breadcrumbs />
+      </div>
 
       <section className="hero">
         <div className="hero-content">
@@ -118,10 +163,13 @@ export const Home: React.FC = () => {
           </a>
         </div>
       </section>
+
       <main className="container">
         <h2 className="section-title" id="catalog">
           Каталог
         </h2>
+
+        {/* 🔍 Поиск — как было изначально, по центру */}
         <div className="search-wrapper">
           <form className="search-form" onSubmit={(e) => e.preventDefault()}>
             <input
@@ -146,6 +194,36 @@ export const Home: React.FC = () => {
             </button>
           </form>
         </div>
+
+        {/* 💰 Фильтры по цене — отдельная строка под поиском, по центру */}
+        <div className="price-filters">
+          <input
+            type="number"
+            className="filter-input"
+            placeholder="От, ₽"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            min="0"
+            step="100"
+          />
+          <span className="separator">—</span>
+          <input
+            type="number"
+            className="filter-input"
+            placeholder="До, ₽"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            min="0"
+            step="100"
+          />
+
+          {hasActiveFilters && (
+            <button onClick={resetFilters} className="btn-secondary">
+              Сбросить
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <p style={{ textAlign: 'center', padding: '60px' }}>Загрузка...</p>
         ) : filteredServices.length > 0 ? (
@@ -156,9 +234,9 @@ export const Home: React.FC = () => {
           </div>
         ) : (
           <div className="search-no-results">
-            <p>Ничего не найдено по запросу «{searchQuery}»</p>
-            <button onClick={() => setSearchQuery('')} className="btn-secondary">
-              Сбросить поиск
+            <p>Ничего не найдено по выбранным фильтрам</p>
+            <button onClick={resetFilters} className="btn-secondary">
+              Сбросить фильтры
             </button>
           </div>
         )}

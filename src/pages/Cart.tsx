@@ -1,33 +1,36 @@
-import { useEffect, useState } from 'react';
+// src/pages/Cart.tsx
+import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
-import type { Order, OrderItem } from '../types';
+import type { Order, OrderItem, User } from '../types';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
-import { useCartContext } from '../hooks/useCartContext';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import '../index.css';
 
-export const Cart: React.FC = () => {
+interface CartProps {
+  user: User | null;
+  cartCount: number;
+  onLogout: () => Promise<void>;
+  onCartChange?: () => Promise<void>;
+}
+
+export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartChange }) => {
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { refreshCart } = useCartContext();
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
-      // ✅ Используем специальный эндпоинт для иконки корзины
       const cartInfo = await apiService.getCartIcon();
-
       if (cartInfo.id) {
-        // Черновик есть — загружаем полную информацию о заказе
-        const order = await apiService.getOrder(cartInfo.id);
-        setOrder(order);
-        setItems(order.items || []);
+        const orderData = await apiService.getOrder(cartInfo.id);
+        setOrder(orderData);
+        setItems(orderData.items || []);
       } else {
-        // Черновика нет — сбрасываем состояние
         setOrder(null);
         setItems([]);
       }
@@ -38,14 +41,18 @@ export const Cart: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
 
   const updateQuantity = async (itemId: number, action: 'increase' | 'decrease') => {
     if (!order) return;
     try {
       await apiService.updateQuantity(order.id, itemId, action);
       await loadCart();
-      await refreshCart();
+      await onCartChange?.();
     } catch (error) {
       console.error('Failed to update quantity:', error);
     }
@@ -54,13 +61,9 @@ export const Cart: React.FC = () => {
   const removeItem = async (itemId: number) => {
     if (!order) return;
     try {
-      // ✅ Находим service_id по itemId, затем удаляем по service_id
-      const item = order.items.find((i) => i.id === itemId);
-      if (!item) throw new Error('Item not found');
-
-      await apiService.removeItemFromOrder(order.id, item.service_id);
+      await apiService.removeItemFromOrder(order.id, itemId);
       await loadCart();
-      await refreshCart();
+      await onCartChange?.();
     } catch (error) {
       console.error('Failed to remove item:', error);
     }
@@ -71,10 +74,9 @@ export const Cart: React.FC = () => {
     if (confirm('Вы уверены, что хотите удалить заявку?')) {
       try {
         await apiService.deleteOrder(order.id);
-        // После удаления — перезагружаем данные и возвращаемся на главную
-        await refreshCart();
         setOrder(null);
         setItems([]);
+        await onCartChange?.();
       } catch (error) {
         console.error('Failed to delete order:', error);
       }
@@ -84,7 +86,7 @@ export const Cart: React.FC = () => {
   if (loading) {
     return (
       <div>
-        <Header />
+        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
@@ -93,11 +95,13 @@ export const Cart: React.FC = () => {
     );
   }
 
-  // 🔹 Случай 1: Черновика заказа НЕТ — показываем "Нет активной заявки"
-  if (!order) {
+  if (!user || !order) {
     return (
       <div>
-        <Header />
+        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <div className="container" style={{ paddingTop: '20px' }}>
+          <Breadcrumbs />
+        </div>
         <main className="container">
           <div className="cart-page">
             <h1 className="section-title">Корзина</h1>
@@ -105,8 +109,9 @@ export const Cart: React.FC = () => {
               <div className="cart-empty-icon">📋</div>
               <h2>Нет активной заявки</h2>
               <p>
-                У вас нет заявки в статусе "Черновик". Добавьте товар в корзину, чтобы создать новую
-                заявку.
+                {user
+                  ? 'У вас нет заявки в статусе "Черновик". Добавьте товар в корзину, чтобы создать новую заявку.'
+                  : 'Пожалуйста, войдите, чтобы просмотреть корзину.'}
               </p>
               <a href="/" className="btn-primary">
                 Перейти в каталог
@@ -119,11 +124,13 @@ export const Cart: React.FC = () => {
     );
   }
 
-  // 🔹 Случай 2: Черновик есть, но товаров в нём НЕТ — показываем "Корзина пуста"
   if (items.length === 0) {
     return (
       <div>
-        <Header />
+        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <div className="container" style={{ paddingTop: '20px' }}>
+          <Breadcrumbs />
+        </div>
         <main className="container">
           <div className="cart-page">
             <h1 className="section-title">Корзина</h1>
@@ -142,15 +149,15 @@ export const Cart: React.FC = () => {
     );
   }
 
-  // 🔹 Случай 3: Черновик есть и в нём есть товары — показываем таблицу
   return (
     <div>
-      <Header />
-
+      <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+      <div className="container" style={{ paddingTop: '20px' }}>
+        <Breadcrumbs />
+      </div>
       <main className="container">
         <div className="cart-page">
           <h1 className="section-title">Корзина</h1>
-
           <div className="cart-content">
             <div className="cart-grid">
               <div className="cart-items">
@@ -217,7 +224,6 @@ export const Cart: React.FC = () => {
                   ← Продолжить выбор
                 </a>
               </div>
-
               <div className="cart-summary">
                 <h2>Итого</h2>
                 <div className="summary-row">
@@ -235,13 +241,12 @@ export const Cart: React.FC = () => {
                 >
                   Удалить заявку
                 </button>
-                <p className="secure-note">🔒︎ Безопасное оформление</p>
+                <p className="secure-note">🔒 Безопасное оформление</p>
               </div>
             </div>
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );

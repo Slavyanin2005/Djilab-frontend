@@ -336,7 +336,7 @@ header.scrolled {
 }
 
 .product-detail {
-  padding: 120px 0 100px;
+  padding: 30px 0 100px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 72px;
@@ -416,18 +416,6 @@ header.scrolled {
   font-size: 1.1rem;
   font-weight: 600;
   transition: border-color 0.2s ease;
-}
-
-.detail input[type='number'] {
-  width: 90px;
-  padding: 14px;
-  text-align: center;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  transition: border-color 0.2s ease;
-
   -moz-appearance: textfield;
   appearance: textfield;
 }
@@ -745,19 +733,6 @@ header.scrolled {
 .quantity-control button:hover {
   background: var(--light-bg);
   color: var(--dji-blue);
-}
-
-.quantity-control input {
-  width: 44px;
-  text-align: center;
-  border: none;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--dark);
-}
-
-.quantity-control input:focus {
-  outline: none;
 }
 
 .quantity-control input {
@@ -1272,4 +1247,114 @@ footer {
 .order-status.deleted {
   background: var(--light-gray);
   color: white;
+}
+
+/* ✅ Breadcrumbs Styles */
+.breadcrumbs {
+  padding: 80px 0 4px;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.breadcrumbs a {
+  color: var(--dji-blue);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.breadcrumbs a:hover {
+  color: var(--dji-blue-dark);
+  text-decoration: none;
+  border-bottom: 1px solid var(--dji-blue);
+}
+
+.breadcrumb-separator {
+  color: var(--light-gray);
+  margin: 0 8px;
+  font-weight: 300;
+  user-select: none;
+}
+
+.breadcrumb-current {
+  color: var(--dark);
+  font-weight: 600;
+}
+
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* ✅ Price Filter Inputs — общие стили */
+.filter-input {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  font-size: 1rem;
+  background: white;
+  transition: border-color 0.2s ease;
+  text-align: center;
+  width: 130px;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--dji-blue);
+  box-shadow: 0 0 0 3px var(--dji-blue-light);
+}
+
+.filter-input::placeholder {
+  color: var(--light-gray);
+}
+
+.filter-input:hover {
+  border-color: var(--dji-blue);
+}
+
+/* ✅ Price Filters Row — центрирование */
+.price-filters {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 0 auto 32px; /* ← центрируем контейнер */
+  flex-wrap: wrap;
+  max-width: 680px; /* ← как у search-wrapper */
+  width: 100%;
+}
+
+.price-filters .separator {
+  color: var(--light-gray);
+  font-weight: 300;
+  user-select: none;
+}
+
+.price-filters .btn-secondary {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .price-filters {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .price-filters .filter-input {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .price-filters .separator {
+    display: none;
+  }
 }

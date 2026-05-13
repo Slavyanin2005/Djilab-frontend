@@ -1,19 +1,18 @@
+// src/services/api.ts
 import axios from 'axios';
-import type { AxiosError } from 'axios';
-import type { Service, Order, UserProfile, RegisterData, User, AuthResponse } from '../types';
+import type { Service, Order, RegisterData, User, AuthResponse } from '../types';
+import { MOCK_SERVICES } from '../mocks/services';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true, // Обязательно для отправки кук
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
+// Интерцептор для CSRF токена
 api.interceptors.request.use((config) => {
-  // Пробуем найти токен по имени из настроек Django
   const csrfToken =
     document.cookie
       .split('; ')
@@ -31,55 +30,81 @@ api.interceptors.request.use((config) => {
 });
 
 export const apiService = {
-  getServices: async (params?: {
-    search?: string;
-    ordering?: string;
-    category?: string;
-  }): Promise<Service[]> => {
+  useMock: false,
+
+  getServices: async (params?: { search?: string }): Promise<Service[]> => {
+    if (apiService.useMock) {
+      if (!params?.search) return MOCK_SERVICES;
+      const query = params.search.toLowerCase();
+      return MOCK_SERVICES.filter(
+        (s) => s.name.toLowerCase().includes(query) || s.category.toLowerCase().includes(query)
+      );
+    }
     const response = await api.get('/services/', { params });
     return response.data;
   },
 
   getService: async (id: number): Promise<Service> => {
+    if (apiService.useMock) {
+      const service = MOCK_SERVICES.find((s) => s.id === id);
+      if (!service) throw new Error('Service not found');
+      return service;
+    }
     const response = await api.get(`/services/${id}/`);
     return response.data;
   },
 
-  createService: async (formData: FormData): Promise<Service> => {
-    const response = await api.post('/services/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
-  },
-
-  getOrders: async (params?: {
-    status?: string;
-    date_from?: string;
-    date_to?: string;
-  }): Promise<Order[]> => {
-    const response = await api.get('/orders/', { params });
+  getOrders: async (): Promise<Order[]> => {
+    if (apiService.useMock) return [];
+    const response = await api.get('/orders/');
     return response.data;
   },
 
   getOrder: async (id: number): Promise<Order> => {
+    if (apiService.useMock) return {} as Order;
     const response = await api.get(`/orders/${id}/`);
     return response.data;
   },
 
   getCartIcon: async (): Promise<{ id: number | null; items_count: number }> => {
+    if (apiService.useMock) return { id: null, items_count: 0 };
     const response = await api.get('/orders/cart_icon/');
     return response.data;
   },
 
-  addItemToOrder: async (
-    orderId: number,
-    serviceId: number,
-    quantity: number = 1
-  ): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/add_item/`, {
-      service_id: serviceId,
-      quantity,
-    });
+  register: async (data: RegisterData): Promise<AuthResponse> => {
+    if (apiService.useMock) return { message: 'OK', username: data.username };
+    const response = await api.post('/profiles/register/', data);
+    return response.data;
+  },
+
+  login: async (username: string, password: string): Promise<AuthResponse> => {
+    if (apiService.useMock) return { message: 'OK', username, id: 1, is_staff: false };
+    const response = await api.post('/profiles/login/', { username, password });
+    return response.data;
+  },
+
+  logout: async (): Promise<void> => {
+    if (apiService.useMock) return;
+    await api.post('/profiles/logout/');
+  },
+
+  getCurrentUser: async (): Promise<User | null> => {
+    if (apiService.useMock) return null;
+    try {
+      const response = await api.get('/profiles/me/');
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  addToOrder: async (serviceId: number, quantity: number = 1): Promise<Order> => {
+    if (apiService.useMock) {
+      alert(`Товар ${serviceId} добавлен в корзину (mock)`);
+      return {} as Order;
+    }
+    const response = await api.post(`/services/${serviceId}/add_to_order/`, { quantity });
     return response.data;
   },
 
@@ -88,6 +113,7 @@ export const apiService = {
     itemId: number,
     action: 'increase' | 'decrease'
   ): Promise<Order> => {
+    if (apiService.useMock) return {} as Order;
     const response = await api.post(`/orders/${orderId}/update_item_legacy/`, {
       item_id: itemId,
       action,
@@ -96,105 +122,14 @@ export const apiService = {
   },
 
   removeItemFromOrder: async (orderId: number, itemId: number): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/remove_item_legacy/`, {
-      item_id: itemId,
-    });
-    return response.data;
-  },
-
-  formOrder: async (orderId: number): Promise<Order> => {
-    const response = await api.put(`/orders/${orderId}/form/`);
-    return response.data;
-  },
-
-  completeOrder: async (
-    orderId: number,
-    action: 'complete' | 'reject' = 'complete'
-  ): Promise<Order> => {
-    const response = await api.put(`/orders/${orderId}/complete/`, { action });
-    return response.data;
-  },
-
-  updateOrder: async (orderId: number, data: Partial<Pick<Order, 'comment'>>): Promise<Order> => {
-    const response = await api.patch(`/orders/${orderId}/`, data);
+    if (apiService.useMock) return {} as Order;
+    const response = await api.post(`/orders/${orderId}/remove_item/`, { item_id: itemId });
     return response.data;
   },
 
   deleteOrder: async (orderId: number): Promise<Order> => {
+    if (apiService.useMock) return {} as Order;
     const response = await api.post(`/orders/${orderId}/delete/`);
     return response.data;
-  },
-
-  getProfile: async (): Promise<UserProfile | null> => {
-    try {
-      const response = await api.get('/profiles/');
-      return response.data[0] || null;
-    } catch {
-      return null;
-    }
-  },
-
-  register: async (data: RegisterData): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/profiles/register/', data);
-      return response.data;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Registration error:', err.response?.data || err.message || error);
-      throw error;
-    }
-  },
-
-  login: async (username: string, password: string): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/profiles/login/', { username, password });
-      return response.data;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Login error:', err.response?.data || err.message || error);
-      throw error;
-    }
-  },
-
-  logout: async (): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/profiles/logout/');
-      return response.data;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Logout error:', err.response?.data || err.message || error);
-      throw error;
-    }
-  },
-
-  getCurrentUser: async (): Promise<User> => {
-    try {
-      const response = await api.get('/profiles/me/');
-      return response.data as User;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Get user error:', err.response?.data || err.message || error);
-      throw error;
-    }
-  },
-
-  createOrder: async (): Promise<Order> => {
-    return { id: null as unknown as number, items_count: 0, status: 'draft', total: '0' } as Order;
-  },
-
-  addToOrder: async (_orderId: number, serviceId: number, quantity: number = 1): Promise<Order> => {
-    const response = await api.post(`/services/${serviceId}/add_to_order/`, { quantity });
-    return response.data;
-  },
-
-  _removeItemLegacy: async (orderId: number, itemId: number): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/remove_item/`, {
-      item_id: itemId,
-    });
-    return response.data;
-  },
-
-  submitOrder: async (orderId: number): Promise<Order> => {
-    return await apiService.formOrder(orderId);
   },
 };
