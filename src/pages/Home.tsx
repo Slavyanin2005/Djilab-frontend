@@ -27,10 +27,9 @@ export const Home: React.FC<HomeProps> = ({
   onCartChange,
 }) => {
   const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
+  const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
 
@@ -38,53 +37,34 @@ export const Home: React.FC<HomeProps> = ({
   const [pendingServiceId, setPendingServiceId] = useState<number | null>(null);
 
   const loadServices = useCallback(async (): Promise<void> => {
+    setLoading(true);
     try {
-      const data = await apiService.getServices();
+      const params: Record<string, any> = {};
+
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+
+      if (minPrice) {
+        params.min_price = parseFloat(minPrice);
+      }
+
+      if (maxPrice) {
+        params.max_price = parseFloat(maxPrice);
+      }
+
+      const data = await apiService.getServices(params);
       setServices(data);
-      setFilteredServices(data);
     } catch (error) {
       console.error('Failed to load services:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchQuery, minPrice, maxPrice]);
 
   useEffect(() => {
     loadServices();
   }, [loadServices]);
-
-  const filterServices = useCallback((): void => {
-    let filtered = [...services];
-
-    // 🔍 Фильтр по поиску
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (service) =>
-          service.name.toLowerCase().includes(query) ||
-          service.category.toLowerCase().includes(query) ||
-          service.description.toLowerCase().includes(query)
-      );
-    }
-
-    const min = minPrice ? parseFloat(minPrice) : null;
-    const max = maxPrice ? parseFloat(maxPrice) : null;
-
-    if (min !== null || max !== null) {
-      filtered = filtered.filter((service) => {
-        const price = parseFloat(service.price);
-        if (min !== null && price < min) return false;
-        if (max !== null && price > max) return false;
-        return true;
-      });
-    }
-
-    setFilteredServices(filtered);
-  }, [searchQuery, minPrice, maxPrice, services]);
-
-  useEffect(() => {
-    filterServices();
-  }, [filterServices]);
 
   const executeAddToCart = async (serviceId: number): Promise<void> => {
     try {
@@ -169,7 +149,6 @@ export const Home: React.FC<HomeProps> = ({
           Каталог
         </h2>
 
-        {/* 🔍 Поиск — как было изначально, по центру */}
         <div className="search-wrapper">
           <form className="search-form" onSubmit={(e) => e.preventDefault()}>
             <input
@@ -195,7 +174,6 @@ export const Home: React.FC<HomeProps> = ({
           </form>
         </div>
 
-        {/* 💰 Фильтры по цене — отдельная строка под поиском, по центру */}
         <div className="price-filters">
           <input
             type="number"
@@ -226,9 +204,9 @@ export const Home: React.FC<HomeProps> = ({
 
         {loading ? (
           <p style={{ textAlign: 'center', padding: '60px' }}>Загрузка...</p>
-        ) : filteredServices.length > 0 ? (
+        ) : services.length > 0 ? (
           <div className="products-grid">
-            {filteredServices.map((service) => (
+            {services.map((service) => (
               <ProductCard key={service.id} service={service} onAddToCart={handleAddToCart} />
             ))}
           </div>

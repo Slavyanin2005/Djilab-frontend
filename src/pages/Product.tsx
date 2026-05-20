@@ -1,4 +1,5 @@
 // src/pages/Product.tsx
+import { findSimilarServices } from '../utils/embeddings';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiService } from '../services/api';
@@ -7,6 +8,7 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { AuthModal } from '../components/AuthModal';
+import { ProductCard } from '../components/ProductCard';
 import '../index.css';
 
 interface ProductProps {
@@ -28,7 +30,10 @@ export const Product: React.FC<ProductProps> = ({
 }) => {
   const { id } = useParams<{ id: string }>();
   const [service, setService] = useState<Service | null>(null);
+  const [similarServices, setSimilarServices] = useState<Service[]>([]);
+  const [allServices, setAllServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
@@ -41,6 +46,24 @@ export const Product: React.FC<ProductProps> = ({
     }
   }, [id]);
 
+  useEffect(() => {
+    const loadAllServices = async () => {
+      try {
+        const services = await apiService.getServices({});
+        setAllServices(services);
+      } catch (error) {
+        console.error('Failed to load all services:', error);
+      }
+    };
+    loadAllServices();
+  }, []);
+
+  useEffect(() => {
+    if (service && allServices.length > 0) {
+      loadSimilarServices();
+    }
+  }, [service, allServices]);
+
   const loadService = async (serviceId: number) => {
     try {
       const data = await apiService.getService(serviceId);
@@ -50,6 +73,48 @@ export const Product: React.FC<ProductProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadSimilarServices = async () => {
+    if (!service || allServices.length === 0) {
+      setLoadingSimilar(false);
+      return;
+    }
+
+    setLoadingSimilar(true);
+    let loaded = false;
+
+    try {
+      // Бэкенд (основной)
+      const response = await fetch(`/api/services/${service.id}/similar/?limit=4`);
+
+      if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+        const similar = await response.json();
+        if (similar.length > 0) {
+          setSimilarServices(similar);
+          loaded = true;
+        }
+      }
+    } catch {}
+
+    // transformer.js
+    if (!loaded) {
+      try {
+        const similar = await findSimilarServices(service, allServices, 4);
+        setSimilarServices(similar);
+        loaded = true;
+      } catch {}
+    }
+
+    if (!loaded && allServices.length > 0) {
+      const random = allServices
+        .filter((s) => s.id !== service.id)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 4);
+      setSimilarServices(random);
+    }
+
+    setLoadingSimilar(false);
   };
 
   const executeAddToCart = async () => {
@@ -233,6 +298,28 @@ export const Product: React.FC<ProductProps> = ({
             </div>
           </div>
         </div>
+
+        <section className="similar-services" style={{ marginTop: '80px' }}>
+          <h2 className="section-title">Похожие товары</h2>
+
+          {loadingSimilar ? (
+            <p style={{ textAlign: 'center', padding: '40px' }}>Загрузка похожих товаров...</p>
+          ) : similarServices.length > 0 ? (
+            <div className="products-grid">
+              {similarServices.map((similarService) => (
+                <ProductCard
+                  key={similarService.id}
+                  service={similarService}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              Похожие товары не найдены
+            </p>
+          )}
+        </section>
       </main>
       <Footer />
     </div>

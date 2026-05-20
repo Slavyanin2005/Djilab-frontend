@@ -10,7 +10,12 @@ export default defineConfig({
         target: 'http://backend:8000',
         changeOrigin: true,
         secure: false,
-
+        rewrite: (path) => path,
+        cookieDomainRewrite: 'localhost',
+        // ✅ Явно задаём Origin для Django
+        headers: {
+          Origin: 'http://localhost:5173',
+        },
         configure: (proxy) => {
           proxy.on('error', (err) => {
             console.log('❌ proxy error:', err);
@@ -24,5 +29,6 @@ export default defineConfig({
         },
       },
     },
+    host: true,
   },
 });
