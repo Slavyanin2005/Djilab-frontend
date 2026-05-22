@@ -1,135 +1,79 @@
-// src/pages/Home.tsx
-import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '../services/api';
-import type { Service, User } from '../types';
+import { useEffect, useCallback, useRef, type SyntheticEvent } from 'react'; // ✅ Добавляем useRef
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../store';
+import {
+  fetchServices,
+  setSearch,
+  setMinPrice,
+  setMaxPrice,
+  resetFilters,
+} from '../store/slices/servicesSlice';
+import { addToCart } from '../store/slices/cartSlice';
 import { ProductCard } from '../components/ProductCard';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { AuthModal } from '../components/AuthModal';
+import type { Service } from '../types';
 import '../index.css';
 
 interface HomeProps {
-  user: User | null;
-  cartCount: number;
-  onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (data: { username: string; email: string; password: string }) => Promise<void>;
-  onLogout: () => Promise<void>;
-  onCartChange?: () => Promise<void>;
+  onAuthRequired: (action?: () => Promise<void>) => void;
 }
 
-export const Home: React.FC<HomeProps> = ({
-  user,
-  cartCount,
-  onLogin,
-  onRegister,
-  onLogout,
-  onCartChange,
-}) => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+export const Home: React.FC<HomeProps> = ({ onAuthRequired }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { services, loading, filters } = useSelector((state: RootState) => state.services);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [minPrice, setMinPrice] = useState<string>('');
-  const [maxPrice, setMaxPrice] = useState<string>('');
+  // ✅ Реф для пропуска первого вызова в useEffect фильтров
+  const isInitialMount = useRef(true);
 
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [pendingServiceId, setPendingServiceId] = useState<number | null>(null);
-
-  const loadServices = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    try {
-      const params: Record<string, any> = {};
-
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
-
-      if (minPrice) {
-        params.min_price = parseFloat(minPrice);
-      }
-
-      if (maxPrice) {
-        params.max_price = parseFloat(maxPrice);
-      }
-
-      const data = await apiService.getServices(params);
-      setServices(data);
-    } catch (error) {
-      console.error('Failed to load services:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery, minPrice, maxPrice]);
-
+  // Загрузка товаров при монтировании
   useEffect(() => {
-    loadServices();
-  }, [loadServices]);
+    dispatch(fetchServices());
+  }, [dispatch]);
 
-  const executeAddToCart = async (serviceId: number): Promise<void> => {
-    try {
-      await apiService.addToOrder(serviceId, 1);
-      await onCartChange?.();
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-    }
-  };
-
-  const handleAddToCart = async (serviceId: number): Promise<void> => {
-    if (!user) {
-      setPendingServiceId(serviceId);
-      setShowAuthModal(true);
+  // ✅ НОВЫЙ useEffect: перезагружает товары при изменении фильтров
+  useEffect(() => {
+    // Пропускаем первый рендер (уже загружено выше)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
       return;
     }
-    await executeAddToCart(serviceId);
+
+    // Debounce: ждём 300мс после изменения фильтра
+    const timer = setTimeout(() => {
+      dispatch(fetchServices());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [dispatch, filters.search, filters.minPrice, filters.maxPrice]);
+
+  const handleAddToCart = useCallback(
+    async (serviceId: number) => {
+      const addToCartAction = async () => {
+        await dispatch(addToCart({ serviceId, quantity: 1 }));
+      };
+
+      if (!user) {
+        onAuthRequired(addToCartAction);
+        return;
+      }
+      await addToCartAction();
+    },
+    [user, dispatch, onAuthRequired]
+  );
+
+  const handleSearch = (e: SyntheticEvent) => {
+    e.preventDefault();
+    dispatch(fetchServices());
   };
 
-  const handleAuthSuccess = async (): Promise<void> => {
-    if (pendingServiceId !== null) {
-      await executeAddToCart(pendingServiceId);
-      setPendingServiceId(null);
-    }
-    setShowAuthModal(false);
-    await onCartChange?.();
-  };
-
-  const handleAuthRequired = (): void => {
-    setShowAuthModal(true);
-  };
-
-  const resetFilters = (): void => {
-    setSearchQuery('');
-    setMinPrice('');
-    setMaxPrice('');
-  };
-
-  const hasActiveFilters = searchQuery.trim() || minPrice || maxPrice;
+  const hasActiveFilters = filters.search || filters.minPrice || filters.maxPrice;
 
   return (
-    <div>
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => {
-            setShowAuthModal(false);
-            setPendingServiceId(null);
-          }}
-          onSuccess={handleAuthSuccess}
-          onLogin={onLogin}
-          onRegister={onRegister}
-        />
-      )}
-
-      <Header
-        user={user}
-        cartCount={cartCount}
-        onLogout={onLogout}
-        onAuthRequired={handleAuthRequired}
-      />
-
+    <>
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>
-
       <section className="hero">
         <div className="hero-content">
           <h1>
@@ -143,20 +87,18 @@ export const Home: React.FC<HomeProps> = ({
           </a>
         </div>
       </section>
-
       <main className="container">
         <h2 className="section-title" id="catalog">
           Каталог
         </h2>
-
         <div className="search-wrapper">
-          <form className="search-form" onSubmit={(e) => e.preventDefault()}>
+          <form className="search-form" onSubmit={handleSearch}>
             <input
               type="text"
               className="search-input"
               placeholder="Найти товар..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={filters.search}
+              onChange={(e) => dispatch(setSearch(e.target.value))}
             />
             <button type="submit" className="search-btn" aria-label="Найти">
               <svg
@@ -173,14 +115,13 @@ export const Home: React.FC<HomeProps> = ({
             </button>
           </form>
         </div>
-
         <div className="price-filters">
           <input
             type="number"
             className="filter-input"
             placeholder="От, ₽"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
+            value={filters.minPrice}
+            onChange={(e) => dispatch(setMinPrice(e.target.value))}
             min="0"
             step="100"
           />
@@ -189,37 +130,34 @@ export const Home: React.FC<HomeProps> = ({
             type="number"
             className="filter-input"
             placeholder="До, ₽"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
+            value={filters.maxPrice}
+            onChange={(e) => dispatch(setMaxPrice(e.target.value))}
             min="0"
             step="100"
           />
-
           {hasActiveFilters && (
-            <button onClick={resetFilters} className="btn-secondary">
+            <button onClick={() => dispatch(resetFilters())} className="btn-secondary">
               Сбросить
             </button>
           )}
         </div>
-
         {loading ? (
           <p style={{ textAlign: 'center', padding: '60px' }}>Загрузка...</p>
         ) : services.length > 0 ? (
           <div className="products-grid">
-            {services.map((service) => (
+            {services.map((service: Service) => (
               <ProductCard key={service.id} service={service} onAddToCart={handleAddToCart} />
             ))}
           </div>
         ) : (
           <div className="search-no-results">
             <p>Ничего не найдено по выбранным фильтрам</p>
-            <button onClick={resetFilters} className="btn-secondary">
+            <button onClick={() => dispatch(resetFilters())} className="btn-secondary">
               Сбросить фильтры
             </button>
           </div>
         )}
       </main>
-      <Footer />
-    </div>
+    </>
   );
 };

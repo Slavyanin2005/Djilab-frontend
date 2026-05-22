@@ -1,145 +1,138 @@
-// src/App.tsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from './store';
+import {
+  checkAuth,
+  logout as logoutAction,
+  login as loginAction,
+  register as registerAction,
+} from './store/slices/authSlice';
+import { loadCart, clearCart } from './store/slices/cartSlice';
+import { clearOrders } from './store/slices/ordersSlice';
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Product } from './pages/Product';
 import { OrdersHistory } from './pages/OrdersHistory';
-import { Login } from './pages/Login';
-import { apiService } from './services/api';
-import type { User } from './types';
+import { OrderDetail } from './pages/OrderDetail';
+import { Profile } from './pages/Profile';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+import { AuthModal } from './components/AuthModal';
 
-function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [cartCount, setCartCount] = useState(0);
+// ✅ Отдельный компонент для прокрутки — работает ВНУТРИ BrowserRouter
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [pathname]);
+  return null;
+};
 
-  const userRef = useRef<User | null>(null);
+// ✅ Основной контент — работает ВНУТРИ BrowserRouter (useNavigate доступен)
+function AppContent() {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+
+  const { user, isInitialized } = useSelector((state: RootState) => state.auth);
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
-    userRef.current = user;
-  }, [user]);
+    dispatch(checkAuth());
+  }, [dispatch]);
 
-  const loadUser = async () => {
-    try {
-      const userData = await apiService.getCurrentUser();
-      setUser(userData);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
+  // ✅ Загружаем корзину при появлении пользователя
+  useEffect(() => {
+    if (isInitialized && user) {
+      dispatch(loadCart());
     }
+  }, [dispatch, user, isInitialized]);
+
+  const handleAuthRequired = (action?: () => Promise<void>) => {
+    if (action) {
+      setPendingAction(() => action);
+    }
+    setShowAuthModal(true);
   };
 
-  const refreshCart = useCallback(async () => {
-    const currentUser = userRef.current;
-    if (!currentUser) {
-      setCartCount(0);
-      return;
+  const handleAuthSuccess = async () => {
+    setShowAuthModal(false);
+    if (pendingAction) {
+      await pendingAction();
+      setPendingAction(null);
     }
-    try {
-      const cartInfo = await apiService.getCartIcon();
-      setCartCount(cartInfo.items_count);
-    } catch {
-      setCartCount(0);
-    }
-  }, []);
+    // ✅ НЕ вызываем loadCart() — useEffect выше уже загрузит корзину
+  };
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      refreshCart();
-    }
-  }, [user, loading, refreshCart]);
+  // ✅ ИСПРАВЛЕНО: плавный редирект через navigate
+  const handleLogout = async () => {
+    await dispatch(logoutAction());
+    dispatch(clearCart());
+    dispatch(clearOrders());
+    dispatch(loadCart()); // Для гостя вернёт {id: null, items_count: 0}
+    navigate('/'); // ✅ Плавный переход без перезагрузки
+  };
 
   const handleLogin = async (username: string, password: string) => {
-    await apiService.login(username, password);
-    await loadUser();
+    await dispatch(loginAction({ username, password })).unwrap();
   };
 
   const handleRegister = async (data: { username: string; email: string; password: string }) => {
-    await apiService.register(data);
-    await loadUser();
+    await dispatch(registerAction(data)).unwrap();
   };
 
-  const handleLogout = async () => {
-    await apiService.logout();
-    setUser(null);
-    setCartCount(0);
-  };
-
-  if (loading) {
-    return <div style={{ padding: '100px', textAlign: 'center' }}>Загрузка...</div>;
+  // ✅ ИСПРАВЛЕНО: НЕ блокируем рендер из-за cartLoading
+  // Приложение рендерится сразу после инициализации авторизации
+  // Корзина грузится в фоне — Header покажет (0) или старое значение, потом обновится
+  if (!isInitialized) {
+    return (
+      <div style={{ padding: '100px', textAlign: 'center', minHeight: '100vh' }}>
+        <p>Загрузка...</p>
+      </div>
+    );
   }
 
   return (
-    <BrowserRouter>
+    <>
+      <ScrollToTop />
+
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => {
+            setShowAuthModal(false);
+            setPendingAction(null);
+          }}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
+
+      {/* ✅ УБРАЛИ key — Header обновляется через props, а не пересоздаётся */}
+      <Header onLogout={handleLogout} onAuthRequired={handleAuthRequired} />
+
       <Routes>
-        {/* Home получает ВСЕ пропсы (нужны для AuthModal) */}
-        <Route
-          path="/"
-          element={
-            <Home
-              user={user}
-              cartCount={cartCount}
-              onLogin={handleLogin}
-              onRegister={handleRegister}
-              onLogout={handleLogout}
-              onCartChange={refreshCart}
-            />
-          }
-        />
-
-        {/* Cart получает ТОЛЬКО нужные пропсы */}
-        <Route
-          path="/cart"
-          element={
-            <Cart
-              user={user}
-              cartCount={cartCount}
-              onLogout={handleLogout}
-              onCartChange={refreshCart}
-            />
-          }
-        />
-
-        {/* Product получает ТОЛЬКО нужные пропсы */}
-        <Route
-          path="/product/:id"
-          element={
-            <Product
-              user={user}
-              cartCount={cartCount}
-              onLogin={handleLogin} // ← Product НУЖЕН onLogin для AuthModal
-              onRegister={handleRegister} // ← Product НУЖЕН onRegister для AuthModal
-              onLogout={handleLogout}
-              onCartChange={refreshCart}
-            />
-          }
-        />
-
-        {/* OrdersHistory получает ТОЛЬКО нужные пропсы */}
-        <Route
-          path="/orders/history"
-          element={
-            <OrdersHistory
-              user={user}
-              cartCount={cartCount}
-              onLogout={handleLogout}
-              onCartChange={refreshCart}
-            />
-          }
-        />
-
-        {/* Login получает только onLogin/onRegister */}
-        <Route
-          path="/login"
-          element={<Login onLogin={handleLogin} onRegister={handleRegister} />}
-        />
+        <Route path="/" element={<Home onAuthRequired={handleAuthRequired} />} />
+        <Route path="/cart" element={<Cart onAuthRequired={handleAuthRequired} />} />
+        <Route path="/product/:id" element={<Product onAuthRequired={handleAuthRequired} />} />
+        <Route path="/orders/history" element={<OrdersHistory />} />
+        <Route path="/orders/:id" element={<OrderDetail onAuthRequired={handleAuthRequired} />} />
+        <Route path="/profile" element={<Profile onLogout={handleLogout} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      <Footer />
+    </>
+  );
+}
+
+// ✅ Главный App — только оборачивает AppContent в BrowserRouter
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

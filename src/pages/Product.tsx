@@ -2,33 +2,26 @@
 import { findSimilarServices } from '../utils/embeddings';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiService } from '../services/api';
-import type { Service, User } from '../types';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState, AppDispatch } from '../store';
+import { addToCart } from '../store/slices/cartSlice'; // ← addToCart, не addToOrder!
+import { api } from '../services/api';
+import type { Service } from '../types';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { AuthModal } from '../components/AuthModal';
 import { ProductCard } from '../components/ProductCard';
 import '../index.css';
 
 interface ProductProps {
-  user: User | null;
-  cartCount: number;
-  onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (data: { username: string; email: string; password: string }) => Promise<void>;
-  onLogout: () => Promise<void>;
-  onCartChange?: () => Promise<void>;
+  onAuthRequired?: () => void;
 }
 
-export const Product: React.FC<ProductProps> = ({
-  user,
-  cartCount,
-  onLogin,
-  onRegister,
-  onLogout,
-  onCartChange,
-}) => {
+export const Product: React.FC<ProductProps> = ({ onAuthRequired }) => {
   const { id } = useParams<{ id: string }>();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+
   const [service, setService] = useState<Service | null>(null);
   const [similarServices, setSimilarServices] = useState<Service[]>([]);
   const [allServices, setAllServices] = useState<Service[]>([]);
@@ -36,9 +29,6 @@ export const Product: React.FC<ProductProps> = ({
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [pendingServiceId, setPendingServiceId] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -49,7 +39,7 @@ export const Product: React.FC<ProductProps> = ({
   useEffect(() => {
     const loadAllServices = async () => {
       try {
-        const services = await apiService.getServices({});
+        const services = await api.getServices({});
         setAllServices(services);
       } catch (error) {
         console.error('Failed to load all services:', error);
@@ -66,7 +56,7 @@ export const Product: React.FC<ProductProps> = ({
 
   const loadService = async (serviceId: number) => {
     try {
-      const data = await apiService.getService(serviceId);
+      const data = await api.getService(serviceId);
       setService(data);
     } catch (error) {
       console.error('Failed to load service:', error);
@@ -80,14 +70,10 @@ export const Product: React.FC<ProductProps> = ({
       setLoadingSimilar(false);
       return;
     }
-
     setLoadingSimilar(true);
     let loaded = false;
-
     try {
-      // Бэкенд (основной)
       const response = await fetch(`/api/services/${service.id}/similar/?limit=4`);
-
       if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
         const similar = await response.json();
         if (similar.length > 0) {
@@ -96,8 +82,6 @@ export const Product: React.FC<ProductProps> = ({
         }
       }
     } catch {}
-
-    // transformer.js
     if (!loaded) {
       try {
         const similar = await findSimilarServices(service, allServices, 4);
@@ -105,7 +89,6 @@ export const Product: React.FC<ProductProps> = ({
         loaded = true;
       } catch {}
     }
-
     if (!loaded && allServices.length > 0) {
       const random = allServices
         .filter((s) => s.id !== service.id)
@@ -113,15 +96,22 @@ export const Product: React.FC<ProductProps> = ({
         .slice(0, 4);
       setSimilarServices(random);
     }
-
     setLoadingSimilar(false);
   };
 
   const executeAddToCart = async () => {
     if (!service) return;
     try {
-      await apiService.addToOrder(service.id, quantity);
-      await onCartChange?.();
+      // ✅ Передаём и serviceId, и текущее количество
+      await dispatch(
+        addToCart({
+          serviceId: service.id,
+          quantity,
+        })
+      ).unwrap();
+
+      // Опционально: сбросить количество после успешного добавления
+      setQuantity(1);
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }
@@ -129,33 +119,20 @@ export const Product: React.FC<ProductProps> = ({
 
   const handleAddToCart = async () => {
     if (!user) {
-      setPendingServiceId(service?.id || null);
-      setShowAuthModal(true);
+      onAuthRequired?.();
       return;
     }
     await executeAddToCart();
   };
 
-  const handleAuthSuccess = async () => {
-    if (pendingServiceId !== null) {
-      await apiService.addToOrder(pendingServiceId, quantity);
-      setPendingServiceId(null);
-    }
-    setShowAuthModal(false);
-    await onCartChange?.();
-  };
-
   const updateQuantity = (change: number) => {
-    setQuantity((prev) => {
-      const newValue = prev + change;
-      return Math.max(1, Math.min(99, newValue));
-    });
+    setQuantity((prev) => Math.max(1, Math.min(99, prev + change)));
   };
 
   if (loading) {
     return (
       <div>
-        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
@@ -167,7 +144,7 @@ export const Product: React.FC<ProductProps> = ({
   if (!service) {
     return (
       <div>
-        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Товар не найден
         </div>
@@ -183,29 +160,14 @@ export const Product: React.FC<ProductProps> = ({
     service.image_key_4,
     service.image_key_5,
   ].filter(Boolean);
-
   const MEDIA_URL = 'http://localhost:9000/djilab-products/';
 
   return (
     <div>
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => {
-            setShowAuthModal(false);
-            setPendingServiceId(null);
-          }}
-          onSuccess={handleAuthSuccess}
-          onLogin={onLogin}
-          onRegister={onRegister}
-        />
-      )}
-
-      <Header user={user} cartCount={cartCount} onLogout={onLogout} />
-
+      <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>
-
       <main className="container">
         <div className="product-detail">
           <div className="product-gallery">
@@ -298,10 +260,8 @@ export const Product: React.FC<ProductProps> = ({
             </div>
           </div>
         </div>
-
         <section className="similar-services" style={{ marginTop: '80px' }}>
           <h2 className="section-title">Похожие товары</h2>
-
           {loadingSimilar ? (
             <p style={{ textAlign: 'center', padding: '40px' }}>Загрузка похожих товаров...</p>
           ) : similarServices.length > 0 ? (

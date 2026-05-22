@@ -1,13 +1,11 @@
-// src/components/AuthModal.tsx
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AxiosError } from 'axios';
 
 interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
-  onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (data: { username: string; email: string; password: string }) => Promise<void>;
+  onLogin?: (username: string, password: string) => Promise<void>;
+  onRegister?: (data: { username: string; email: string; password: string }) => Promise<void>;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -24,49 +22,67 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // ✅ ЖЁСТКАЯ ЗАЩИТА от перезагрузки
     e.preventDefault();
+    e.stopPropagation();
+
     setError(null);
     setLoading(true);
 
     try {
       if (isLogin) {
-        await onLogin(username, password);
+        if (onLogin) {
+          await onLogin(username, password);
+        }
       } else {
-        await onRegister({ username, email, password });
+        if (onRegister) {
+          await onRegister({ username, email, password });
+        }
       }
+      // ✅ Только при успехе закрываем модалку
       onSuccess();
-    } catch (err) {
-      const axiosErr = err as AxiosError;
-      const msg = axiosErr.response?.data;
+    } catch (err: any) {
+      console.log('🔍 Auth error:', err, 'type:', typeof err);
 
-      if (typeof msg === 'object' && msg !== null) {
-        const errors = Object.entries(msg)
-          .map(
-            ([field, messages]) =>
-              `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
-          )
-          .join('; ');
-        setError(errors);
-      } else {
-        setError((msg as string) || 'Ошибка авторизации');
+      // ✅ Извлекаем сообщение (строка от .unwrap())
+      let message = 'Ошибка авторизации';
+
+      if (typeof err === 'string') {
+        message = err; // ← Наш случай!
+      } else if (err?.payload && typeof err.payload === 'string') {
+        message = err.payload;
+      } else if (err?.response?.data?.error) {
+        message = err.response.data.error;
+      } else if (err?.message) {
+        message = err.message;
+      } else if (err?.error && typeof err.error === 'string') {
+        message = err.error;
       }
+
+      setError(message);
+      // ✅ Критично: прерываем выполнение, не вызываем onSuccess()
+      return false;
     } finally {
       setLoading(false);
     }
+
+    // ✅ Явно возвращаем false, чтобы браузер не сабмитил форму
+    return false;
   };
 
   return createPortal(
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <button style={styles.closeBtn} onClick={onClose}>
+        <button style={styles.closeBtn} onClick={onClose} type="button">
           ×
         </button>
+        <h2 style={styles.title}>{isLogin ? 'Вход в систему' : 'Регистрация'}</h2>
 
-        <h2 style={styles.title}>{isLogin ? 'Вход в DJILab' : 'Регистрация'}</h2>
-
+        {/* ✅ Красное окошко с ошибкой */}
         {error && <div style={styles.error}>{error}</div>}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        {/* ✅ noValidate отключает встроенную валидацию браузера */}
+        <form onSubmit={handleSubmit} style={styles.form} noValidate>
           <input
             type="text"
             placeholder="Имя пользователя"
@@ -76,7 +92,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             required
             disabled={loading}
           />
-
           {!isLogin && (
             <input
               type="email"
@@ -88,7 +103,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               disabled={loading}
             />
           )}
-
           <input
             type="password"
             placeholder="Пароль"
@@ -98,16 +112,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             required
             disabled={loading}
           />
-
           <button type="submit" style={styles.submitBtn} disabled={loading}>
             {loading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
           </button>
         </form>
-
         <p style={styles.switchText}>
           {isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?'}
           <button
-            type="button"
+            type="button" // ✅ Критично: не сабмитит форму
             onClick={() => {
               setIsLogin(!isLogin);
               setError(null);

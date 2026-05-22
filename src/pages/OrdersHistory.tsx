@@ -1,47 +1,24 @@
-// src/pages/OrdersHistory.tsx
-import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '../services/api';
-import type { Order, User } from '../types';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom'; // ✅ Уже есть
+import type { AppDispatch, RootState } from '../store';
+import { fetchOrders, clearOrders } from '../store/slices/ordersSlice';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import type { User } from '../types';
 import '../index.css';
 
-interface OrdersHistoryProps {
-  user: User | null;
-  cartCount: number;
-  onLogout: () => Promise<void>;
-  onCartChange?: () => Promise<void>;
-}
-
-export const OrdersHistory: React.FC<OrdersHistoryProps> = ({
-  user,
-  cartCount,
-  onLogout,
-  onCartChange,
-}) => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadOrders = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const data = await apiService.getOrders();
-      setOrders(data);
-      await onCartChange?.();
-    } catch (error) {
-      console.error('Failed to load orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, onCartChange]); // ← Добавили onCartChange
+export const OrdersHistory: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { orders, loading } = useSelector((state: RootState) => state.orders);
 
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+    if (user) {
+      dispatch(fetchOrders());
+    } else {
+      dispatch(clearOrders());
+    }
+  }, [dispatch, user]);
 
   const getStatusClass = (status: string): string => {
     const classes: { [key: string]: string } = {
@@ -56,25 +33,22 @@ export const OrdersHistory: React.FC<OrdersHistoryProps> = ({
 
   if (loading) {
     return (
-      <div>
-        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
-        <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
-          Загрузка...
-        </div>
-        <Footer />
+      <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
+        Загрузка...
       </div>
     );
   }
 
   return (
-    <div>
-      <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+    <>
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>
       <main className="container">
         <div className="cart-page">
-          <h1 className="section-title">{user?.is_staff ? 'Все заявки системы' : 'Мои заявки'}</h1>
+          <h1 className="section-title">
+            {(user as User | null)?.is_staff ? 'Все заявки системы' : 'Мои заявки'}
+          </h1>
           {orders.length > 0 ? (
             <div className="cart-content">
               <table className="cart-table">
@@ -92,7 +66,18 @@ export const OrdersHistory: React.FC<OrdersHistoryProps> = ({
                   {orders.map((order) => (
                     <tr key={order.id}>
                       <td>
-                        <strong>#{order.id}</strong>
+                        <Link
+                          to={`/orders/${order.id}`}
+                          style={{
+                            color: 'var(--dji-blue)',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                          onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                        >
+                          #{order.id}
+                        </Link>
                       </td>
                       <td>{new Date(order.created_at).toLocaleString('ru-RU')}</td>
                       <td>{order.creator ? order.creator.username : 'Неизвестно'}</td>
@@ -109,23 +94,24 @@ export const OrdersHistory: React.FC<OrdersHistoryProps> = ({
                   ))}
                 </tbody>
               </table>
-              <a href="/" className="continue-shopping">
+              {/* ✅ Исправлено: Link вместо a href */}
+              <Link to="/" className="continue-shopping">
                 ← Вернуться в каталог
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="cart-empty">
               <div className="cart-empty-icon">📋</div>
               <h2>У вас пока нет заявок</h2>
               <p>Добавьте товары из каталога, чтобы создать первую заявку</p>
-              <a href="/" className="btn-primary">
+              {/* ✅ Исправлено: Link вместо a href */}
+              <Link to="/" className="btn-primary">
                 Перейти в каталог
-              </a>
+              </Link>
             </div>
           )}
         </div>
       </main>
-      <Footer />
-    </div>
+    </>
   );
 };

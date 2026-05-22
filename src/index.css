@@ -1,3 +1,4 @@
+/* src/index.css */
 :root {
   --dji-blue: #0971ce;
   --dji-blue-dark: #0759a3;
@@ -999,7 +1000,6 @@ footer {
     grid-template-columns: 1fr;
     gap: 32px;
   }
-
   .gallery-nav {
     opacity: 1;
     width: 40px;
@@ -1057,9 +1057,11 @@ footer {
 .text-blue {
   color: var(--dji-blue);
 }
+
 .bg-blue-light {
   background: var(--dji-blue-light);
 }
+
 .hidden {
   display: none !important;
 }
@@ -1142,6 +1144,11 @@ footer {
   transform: scale(0.98);
 }
 
+.search-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 .search-hint {
   margin-top: 12px;
   font-size: 0.9rem;
@@ -1188,16 +1195,13 @@ footer {
   .search-wrapper {
     margin-bottom: 32px;
   }
-
   .search-form {
     flex-direction: row;
   }
-
   .search-input {
     padding: 12px 16px;
     font-size: 0.95rem;
   }
-
   .search-btn {
     width: 40px;
     height: 40px;
@@ -1228,28 +1232,32 @@ footer {
   font-size: 0.85rem;
   font-weight: 500;
 }
+
 .order-status.draft {
   background: var(--warning);
   color: white;
 }
+
 .order-status.formed {
   background: var(--dji-blue-light);
   color: var(--dji-blue);
 }
+
 .order-status.completed {
   background: var(--success);
   color: white;
 }
+
 .order-status.rejected {
   background: var(--error);
   color: white;
 }
+
 .order-status.deleted {
   background: var(--light-gray);
   color: white;
 }
 
-/* ✅ Breadcrumbs Styles */
 .breadcrumbs {
   padding: 80px 0 4px;
   margin-bottom: 0;
@@ -1292,7 +1300,6 @@ footer {
   white-space: nowrap;
 }
 
-/* ✅ Price Filter Inputs — общие стили */
 .filter-input {
   padding: 12px 16px;
   border: 2px solid var(--border);
@@ -1318,15 +1325,14 @@ footer {
   border-color: var(--dji-blue);
 }
 
-/* ✅ Price Filters Row — центрирование */
 .price-filters {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 16px;
-  margin: 0 auto 32px; /* ← центрируем контейнер */
+  margin: 0 auto 32px;
   flex-wrap: wrap;
-  max-width: 680px; /* ← как у search-wrapper */
+  max-width: 680px;
   width: 100%;
 }
 
@@ -1341,19 +1347,16 @@ footer {
   font-size: 0.9rem;
 }
 
-/* Адаптивность для мобильных */
 @media (max-width: 768px) {
   .price-filters {
     flex-direction: column;
     gap: 12px;
     margin-bottom: 24px;
   }
-
   .price-filters .filter-input {
     width: 100%;
     max-width: 220px;
   }
-
   .price-filters .separator {
     display: none;
   }

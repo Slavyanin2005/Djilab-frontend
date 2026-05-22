@@ -1,92 +1,87 @@
-// src/pages/Cart.tsx
-import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '../services/api';
-import type { Order, OrderItem, User } from '../types';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, Link } from 'react-router-dom'; // ✅ Добавлен Link
+import type { RootState, AppDispatch } from '../store';
+import { updateQuantity, removeItem, deleteOrder, formOrder } from '../store/slices/cartSlice';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import type { OrderItem } from '../types';
 import '../index.css';
 
 interface CartProps {
-  user: User | null;
-  cartCount: number;
-  onLogout: () => Promise<void>;
-  onCartChange?: () => Promise<void>;
+  onAuthRequired?: () => void;
 }
 
-export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartChange }) => {
-  const [order, setOrder] = useState<Order | null>(null);
-  const [items, setItems] = useState<OrderItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { draftOrder, items, loading } = useSelector((state: RootState) => state.cart);
 
-  const loadCart = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
+  useEffect(() => {
+    if (draftOrder) {
+      // Опционально: можно сбросить локальные флаги
+    }
+  }, [draftOrder]);
+
+  const handleUpdateQuantity = (itemId: number, action: 'increase' | 'decrease') => {
+    if (draftOrder) {
+      const item = items.find((i) => i.id === itemId);
+      if (item) {
+        dispatch(
+          updateQuantity({
+            orderId: draftOrder.id,
+            serviceId: item.service.id,
+            action,
+            currentQty: item.quantity,
+          })
+        );
+      }
+    }
+  };
+
+  const handleRemoveItem = (itemId: number) => {
+    if (draftOrder) {
+      const item = items.find((i) => i.id === itemId);
+      if (item) {
+        dispatch(
+          removeItem({
+            orderId: draftOrder.id,
+            serviceId: item.service.id,
+          })
+        );
+      }
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!draftOrder) return;
+    if (!confirm('Вы уверены, что хотите удалить заявку?')) {
       return;
     }
     try {
-      const cartInfo = await apiService.getCartIcon();
-      if (cartInfo.id) {
-        const orderData = await apiService.getOrder(cartInfo.id);
-        setOrder(orderData);
-        setItems(orderData.items || []);
-      } else {
-        setOrder(null);
-        setItems([]);
-      }
-    } catch (error) {
-      console.error('Failed to load cart:', error);
-      setOrder(null);
-      setItems([]);
-    } finally {
-      setLoading(false);
+      await dispatch(deleteOrder(draftOrder.id)).unwrap();
+    } catch (err: any) {
+      console.error('❌ Ошибка при удалении заявки:', err);
+      alert('Не удалось удалить заявку: ' + (err.message || 'Неизвестная ошибка'));
     }
-  }, [user]);
+  };
 
-  useEffect(() => {
-    loadCart();
-  }, [loadCart]);
-
-  const updateQuantity = async (itemId: number, action: 'increase' | 'decrease') => {
-    if (!order) return;
+  const handleFormOrder = async () => {
+    if (!draftOrder) return;
     try {
-      await apiService.updateQuantity(order.id, itemId, action);
-      await loadCart();
-      await onCartChange?.();
-    } catch (error) {
-      console.error('Failed to update quantity:', error);
+      await dispatch(formOrder(draftOrder.id)).unwrap();
+      navigate('/orders/history');
+    } catch (err) {
+      alert('❌ Ошибка при оформлении: ' + (err as Error).message);
     }
   };
 
-  const removeItem = async (itemId: number) => {
-    if (!order) return;
-    try {
-      await apiService.removeItemFromOrder(order.id, itemId);
-      await loadCart();
-      await onCartChange?.();
-    } catch (error) {
-      console.error('Failed to remove item:', error);
-    }
-  };
-
-  const deleteOrder = async () => {
-    if (!order) return;
-    if (confirm('Вы уверены, что хотите удалить заявку?')) {
-      try {
-        await apiService.deleteOrder(order.id);
-        setOrder(null);
-        setItems([]);
-        await onCartChange?.();
-      } catch (error) {
-        console.error('Failed to delete order:', error);
-      }
-    }
-  };
-
-  if (loading) {
+  if (loading && !draftOrder) {
     return (
       <div>
-        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
@@ -95,10 +90,10 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
     );
   }
 
-  if (!user || !order) {
+  if (!user || !draftOrder) {
     return (
       <div>
-        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ paddingTop: '20px' }}>
           <Breadcrumbs />
         </div>
@@ -113,9 +108,10 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
                   ? 'У вас нет заявки в статусе "Черновик". Добавьте товар в корзину, чтобы создать новую заявку.'
                   : 'Пожалуйста, войдите, чтобы просмотреть корзину.'}
               </p>
-              <a href="/" className="btn-primary">
+              {/* ✅ Исправлено: Link вместо a href */}
+              <Link to="/" className="btn-primary">
                 Перейти в каталог
-              </a>
+              </Link>
             </div>
           </div>
         </main>
@@ -127,7 +123,7 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
   if (items.length === 0) {
     return (
       <div>
-        <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ paddingTop: '20px' }}>
           <Breadcrumbs />
         </div>
@@ -138,9 +134,10 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
               <div className="cart-empty-icon">🛒</div>
               <h2>Ваша корзина пуста</h2>
               <p>Добавьте товары из каталога, чтобы оформить заказ</p>
-              <a href="/" className="btn-primary">
+              {/* ✅ Исправлено: Link вместо a href */}
+              <Link to="/" className="btn-primary">
                 Вернуться в каталог
-              </a>
+              </Link>
             </div>
           </div>
         </main>
@@ -151,7 +148,7 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
 
   return (
     <div>
-      <Header user={user} cartCount={cartCount} onLogout={onLogout} />
+      <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>
@@ -172,7 +169,7 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
+                    {items.map((item: OrderItem) => (
                       <tr key={item.id}>
                         <td>
                           <div className="item-info">
@@ -191,14 +188,14 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
                         <td>
                           <div className="quantity-control">
                             <button
-                              onClick={() => updateQuantity(item.id, 'decrease')}
+                              onClick={() => handleUpdateQuantity(item.id, 'decrease')}
                               type="button"
                             >
                               −
                             </button>
                             <input type="number" value={item.quantity} readOnly />
                             <button
-                              onClick={() => updateQuantity(item.id, 'increase')}
+                              onClick={() => handleUpdateQuantity(item.id, 'increase')}
                               type="button"
                             >
                               +
@@ -208,7 +205,7 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
                         <td className="item-total">{item.subtotal} ₽</td>
                         <td>
                           <button
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => handleRemoveItem(item.id)}
                             className="remove-btn"
                             title="Удалить"
                             type="button"
@@ -220,27 +217,37 @@ export const Cart: React.FC<CartProps> = ({ user, cartCount, onLogout, onCartCha
                     ))}
                   </tbody>
                 </table>
-                <a href="/" className="continue-shopping">
+                {/* ✅ Исправлено: Link вместо a href */}
+                <Link to="/" className="continue-shopping">
                   ← Продолжить выбор
-                </a>
+                </Link>
               </div>
               <div className="cart-summary">
                 <h2>Итого</h2>
                 <div className="summary-row">
-                  <span>Товары ({order.items_count} шт.)</span>
-                  <span>{order.total} ₽</span>
+                  <span>Товары ({draftOrder.items_count} шт.)</span>
+                  <span>{draftOrder.total} ₽</span>
                 </div>
                 <div className="summary-total">
                   <span>Всего</span>
-                  <span>{order.total} ₽</span>
+                  <span>{draftOrder.total} ₽</span>
                 </div>
-                <button
-                  onClick={deleteOrder}
-                  className="checkout-btn"
-                  style={{ background: 'var(--error)' }}
-                >
-                  Удалить заявку
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <button
+                    onClick={handleFormOrder}
+                    className="checkout-btn"
+                    style={{ background: 'var(--success)' }}
+                  >
+                    ✅ Оформить заказ
+                  </button>
+                  <button
+                    onClick={handleDeleteOrder}
+                    className="checkout-btn"
+                    style={{ background: 'var(--error)' }}
+                  >
+                    🗑️ Удалить заявку
+                  </button>
+                </div>
                 <p className="secure-note">🔒 Безопасное оформление</p>
               </div>
             </div>

@@ -1,36 +1,34 @@
 // src/pages/Login.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '../store';
+import { login as loginAction, register as registerAction } from '../store/slices/authSlice';
 import '../index.css';
 
-interface LoginProps {
-  onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (data: { username: string; email: string; password: string }) => Promise<void>;
-}
-
-export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
+export const Login: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
     try {
       if (isLogin) {
-        await onLogin(formData.username, formData.password);
+        await dispatch(
+          loginAction({ username: formData.username, password: formData.password })
+        ).unwrap();
       } else {
-        await onRegister({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-        });
+        await dispatch(
+          registerAction({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+          })
+        ).unwrap();
       }
       navigate('/');
       window.location.reload();
@@ -44,9 +42,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>{isLogin ? 'Вход' : 'Регистрация'}</h2>
-
         {error && <div style={styles.error}>{error}</div>}
-
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -56,7 +52,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
             style={styles.input}
             required
           />
-
           {!isLogin && (
             <input
               type="email"
@@ -67,7 +62,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
               required
             />
           )}
-
           <input
             type="password"
             placeholder="Пароль"
@@ -76,12 +70,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
             style={styles.input}
             required
           />
-
           <button type="submit" style={styles.button}>
             {isLogin ? 'Войти' : 'Зарегистрироваться'}
           </button>
         </form>
-
         <p style={styles.switch}>
           {isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?'}
           <button
@@ -95,7 +87,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
             {isLogin ? 'Зарегистрироваться' : 'Войти'}
           </button>
         </p>
-
         <button onClick={() => navigate('/')} style={styles.backButton}>
           ← На главную
         </button>
@@ -121,11 +112,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: '400px',
   },
-  title: {
-    textAlign: 'center',
-    marginBottom: '24px',
-    color: 'var(--dark)',
-  },
+  title: { textAlign: 'center', marginBottom: '24px', color: 'var(--dark)' },
   error: {
     background: 'var(--error)',
     color: 'white',
@@ -155,10 +142,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     marginBottom: '16px',
   },
-  switch: {
-    textAlign: 'center',
-    color: 'var(--gray)',
-  },
+  switch: { textAlign: 'center', color: 'var(--gray)' },
   link: {
     background: 'none',
     border: 'none',

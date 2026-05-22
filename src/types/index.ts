@@ -51,9 +51,11 @@ export interface OrderItem {
   subtotal: string;
 }
 
+export type OrderStatus = 'draft' | 'formed' | 'completed' | 'rejected' | 'deleted';
+
 export interface Order {
   id: number;
-  status: 'draft' | 'formed' | 'completed' | 'rejected' | 'deleted';
+  status: OrderStatus;
   status_display: string;
   creator: {
     id: number;

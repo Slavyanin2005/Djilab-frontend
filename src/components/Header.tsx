@@ -1,20 +1,18 @@
-// src/components/Header.tsx
-import { Link, useNavigate } from 'react-router-dom';
-import type { User } from '../types';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
 
 interface HeaderProps {
-  user: User | null;
-  cartCount: number;
-  onLogout: () => Promise<void>;
+  onLogout: () => void;
   onAuthRequired?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, cartCount, onLogout, onAuthRequired }) => {
-  const navigate = useNavigate();
+export const Header: React.FC<HeaderProps> = ({ onLogout, onAuthRequired }) => {
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { itemsCount } = useSelector((state: RootState) => state.cart);
 
   const handleLogout = async () => {
     await onLogout();
-    navigate('/');
   };
 
   return (
@@ -32,12 +30,26 @@ export const Header: React.FC<HeaderProps> = ({ user, cartCount, onLogout, onAut
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <Link to="/cart" className="cart-btn">
-              Корзина ({cartCount})
+              Корзина ({itemsCount})
             </Link>
             {user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ color: 'var(--dark)', fontWeight: 500, fontSize: '0.95rem' }}>
-                  {user.username}
+                {/* ✅ Имя пользователя — ссылка на профиль */}
+                <Link
+                  to="/profile"
+                  style={{
+                    color: 'var(--dark)',
+                    fontWeight: 500,
+                    fontSize: '0.95rem',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.color = 'var(--dji-blue)')}
+                  onMouseOut={(e) => (e.currentTarget.style.color = 'var(--dark)')}
+                >
+                  👤 {user.username}
                   {user.is_staff && (
                     <span
                       style={{
@@ -46,14 +58,12 @@ export const Header: React.FC<HeaderProps> = ({ user, cartCount, onLogout, onAut
                         padding: '2px 6px',
                         borderRadius: '4px',
                         fontSize: '0.7rem',
-                        marginLeft: '6px',
-                        verticalAlign: 'middle',
                       }}
                     >
                       ADMIN
                     </span>
                   )}
-                </span>
+                </Link>
                 <button
                   onClick={handleLogout}
                   style={{
