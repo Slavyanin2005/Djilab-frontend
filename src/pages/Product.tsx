@@ -15,9 +15,10 @@ import '../index.css';
 
 interface ProductProps {
   onAuthRequired?: () => void;
+  onLogout: () => void; // ✅ Добавляем
 }
 
-export const Product: React.FC<ProductProps> = ({ onAuthRequired }) => {
+export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -132,7 +133,7 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired }) => {
   if (loading) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
@@ -144,7 +145,7 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired }) => {
   if (!service) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Товар не найден
         </div>
@@ -164,7 +165,7 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired }) => {
 
   return (
     <div>
-      <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+      <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>

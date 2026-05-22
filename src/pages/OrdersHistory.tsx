@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react'; // ✅ Добавляем useRef
 import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom'; // ✅ Уже есть
+import { Link } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../store';
 import { fetchOrders, clearOrders } from '../store/slices/ordersSlice';
 import { Breadcrumbs } from '../components/Breadcrumbs';
@@ -12,6 +12,10 @@ export const OrdersHistory: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { orders, loading } = useSelector((state: RootState) => state.orders);
 
+  // ✅ Реф для хранения ID интервала polling
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 🔹 Основной эффект: загрузка при изменении пользователя
   useEffect(() => {
     if (user) {
       dispatch(fetchOrders());
@@ -19,6 +23,28 @@ export const OrdersHistory: React.FC = () => {
       dispatch(clearOrders());
     }
   }, [dispatch, user]);
+
+  // 🔹 Short polling: обновляем список каждые 30 секунд ТОЛЬКО для модератора
+  useEffect(() => {
+    // Запускаем polling только если пользователь — модератор
+    if (user?.is_staff) {
+      // ✅ Сразу делаем первый запрос, чтобы не ждать 30 секунд
+      dispatch(fetchOrders());
+
+      // ✅ Устанавливаем интервал
+      pollingIntervalRef.current = setInterval(() => {
+        dispatch(fetchOrders());
+      }, 30000); // 30 секунд
+    }
+
+    // ✅ Очистка интервала при размонтировании или смене пользователя
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [dispatch, user?.is_staff]); // ✅ Зависим только от is_staff
 
   const getStatusClass = (status: string): string => {
     const classes: { [key: string]: string } = {
@@ -94,7 +120,6 @@ export const OrdersHistory: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-              {/* ✅ Исправлено: Link вместо a href */}
               <Link to="/" className="continue-shopping">
                 ← Вернуться в каталог
               </Link>
@@ -104,7 +129,6 @@ export const OrdersHistory: React.FC = () => {
               <div className="cart-empty-icon">📋</div>
               <h2>У вас пока нет заявок</h2>
               <p>Добавьте товары из каталога, чтобы создать первую заявку</p>
-              {/* ✅ Исправлено: Link вместо a href */}
               <Link to="/" className="btn-primary">
                 Перейти в каталог
               </Link>

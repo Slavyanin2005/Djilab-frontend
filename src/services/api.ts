@@ -130,7 +130,8 @@ export const api = {
     id: number,
     status: 'draft' | 'formed' | 'completed' | 'rejected' | 'deleted'
   ): Promise<Order> => {
-    const { data } = await axiosInstance.put<Order>(`/orders/${id}/`, { status });
+    // ✅ ИСПРАВЛЕНО: patch вместо put для частичного обновления
+    const { data } = await axiosInstance.patch<Order>(`/orders/${id}/`, { status });
     return data;
   },
 

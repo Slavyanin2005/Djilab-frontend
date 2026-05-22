@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,css,json}\"",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:api": "swagger-typescript-api generate -p http://localhost:8000/api/schema/ -o ./src/api --name api.ts --axios --unwrap-response-data"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

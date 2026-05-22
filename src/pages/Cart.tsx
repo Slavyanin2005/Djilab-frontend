@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom'; // ✅ Добавлен Link
+import { useNavigate, Link } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { updateQuantity, removeItem, deleteOrder, formOrder } from '../store/slices/cartSlice';
 import { Header } from '../components/Header';
@@ -11,9 +11,11 @@ import '../index.css';
 
 interface CartProps {
   onAuthRequired?: () => void;
+  onLogout: () => void; // ✅ Добавляем
 }
 
-export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
+export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
+  // ✅ Деструктуризируем
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -81,7 +83,8 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
   if (loading && !draftOrder) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        {/* ✅ Передаём реальный onLogout */}
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
@@ -93,7 +96,8 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
   if (!user || !draftOrder) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        {/* ✅ Передаём реальный onLogout */}
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ paddingTop: '20px' }}>
           <Breadcrumbs />
         </div>
@@ -108,7 +112,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
                   ? 'У вас нет заявки в статусе "Черновик". Добавьте товар в корзину, чтобы создать новую заявку.'
                   : 'Пожалуйста, войдите, чтобы просмотреть корзину.'}
               </p>
-              {/* ✅ Исправлено: Link вместо a href */}
               <Link to="/" className="btn-primary">
                 Перейти в каталог
               </Link>
@@ -123,7 +126,8 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
   if (items.length === 0) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        {/* ✅ Передаём реальный onLogout */}
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ paddingTop: '20px' }}>
           <Breadcrumbs />
         </div>
@@ -134,7 +138,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
               <div className="cart-empty-icon">🛒</div>
               <h2>Ваша корзина пуста</h2>
               <p>Добавьте товары из каталога, чтобы оформить заказ</p>
-              {/* ✅ Исправлено: Link вместо a href */}
               <Link to="/" className="btn-primary">
                 Вернуться в каталог
               </Link>
@@ -148,7 +151,8 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
 
   return (
     <div>
-      <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+      {/* ✅ Передаём реальный onLogout */}
+      <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>
@@ -217,7 +221,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired }) => {
                     ))}
                   </tbody>
                 </table>
-                {/* ✅ Исправлено: Link вместо a href */}
                 <Link to="/" className="continue-shopping">
                   ← Продолжить выбор
                 </Link>

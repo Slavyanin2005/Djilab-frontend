@@ -1361,3 +1361,18 @@ footer {
     display: none;
   }
 }
+
+/* ✅ Стили для кнопки корзины без черновика */
+.cart-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  /* ✅ УБРАЛИ pointer-events: none — чтобы работала подсказка title */
+  transition: opacity 0.2s ease;
+}
+
+/* ✅ При наведении на активную кнопку */
+.cart-btn:not(.cart-btn-disabled):hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}

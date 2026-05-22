@@ -93,10 +93,8 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     );
   }
 
+  // ✅ ИСПРАВЛЕНО: убран confirm(), статус меняется сразу
   const handleStatusChange = async (newStatus: Order['status']) => {
-    if (!confirm(`Изменить статус заявки #${currentOrder.id} на "${getStatusLabel(newStatus)}"?`)) {
-      return;
-    }
     setIsSubmitting(true);
     try {
       await dispatch(updateOrderStatus({ id: currentOrder.id, status: newStatus })).unwrap();
@@ -147,7 +145,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
   const availableTransitions: Record<Order['status'], Order['status'][]> = {
     draft: ['formed', 'deleted'],
     formed: ['completed', 'rejected'],
-    completed: [],
+    completed: ['formed'], // ← Теперь можно вернуть в "Сформирован"
     rejected: ['formed'],
     deleted: [],
   };
@@ -305,7 +303,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
                   <tfoot>
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'right', fontWeight: 600 }}>
-                        Итого: {/* ← Добавлен пробел через {' '} */}
+                        Итого:{' '}
                       </td>
                       <td>
                         <strong>{currentOrder.total} ₽</strong>

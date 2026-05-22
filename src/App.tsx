@@ -115,8 +115,14 @@ function AppContent() {
 
       <Routes>
         <Route path="/" element={<Home onAuthRequired={handleAuthRequired} />} />
-        <Route path="/cart" element={<Cart onAuthRequired={handleAuthRequired} />} />
-        <Route path="/product/:id" element={<Product onAuthRequired={handleAuthRequired} />} />
+        <Route
+          path="/cart"
+          element={<Cart onAuthRequired={handleAuthRequired} onLogout={handleLogout} />}
+        />
+        <Route
+          path="/product/:id"
+          element={<Product onAuthRequired={handleAuthRequired} onLogout={handleLogout} />}
+        />
         <Route path="/orders/history" element={<OrdersHistory />} />
         <Route path="/orders/:id" element={<OrderDetail onAuthRequired={handleAuthRequired} />} />
         <Route path="/profile" element={<Profile onLogout={handleLogout} />} />
