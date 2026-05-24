@@ -1,6 +1,28 @@
 import { axiosInstance } from './axios';
 import type { Service, Order, User, RegisterData, UserProfile } from '../types';
 
+// Простой кэш в памяти ключ → { данные, время_сохранения }
+const cache: Record<string, { data: any; timestamp: number }> = {};
+const CACHE_TTL = 120000; // 2 минуты в миллисекундах
+
+// получить из кэша или запросить
+async function cachedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const cached = cache[key];
+
+  // Если есть в кэше и не устарел то возвращаем
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    console.log(`CACHE HIT (frontend): ${key}`);
+    return cached.data as T;
+  }
+
+  // Иначе  запрос к бэкенду + сохранение в кэш
+  console.log(`CACHE MISS (frontend): ${key}`);
+  const data = await requestFn();
+  cache[key] = { data, timestamp: now };
+  return data;
+}
+
 export const api = {
   login: async (username: string, password: string): Promise<User> => {
     const { data } = await axiosInstance.post<User>('/profiles/login/', {
@@ -55,14 +77,20 @@ export const api = {
     });
   },
 
+  // КЭШИРОВАНИЕ список услуг
   getServices: async (params?: {
     search?: string;
     min_price?: string;
     max_price?: string;
     category?: string;
   }): Promise<Service[]> => {
-    const { data } = await axiosInstance.get<Service[]>('/services/', { params });
-    return data;
+    // Уникальный ключ для каждого набора фильтров
+    const cacheKey = `services:${JSON.stringify(params || {})}`;
+
+    return cachedRequest(cacheKey, async () => {
+      const { data } = await axiosInstance.get<Service[]>('/services/', { params });
+      return data;
+    });
   },
 
   getService: async (id: number): Promise<Service> => {
@@ -130,7 +158,6 @@ export const api = {
     id: number,
     status: 'draft' | 'formed' | 'completed' | 'rejected' | 'deleted'
   ): Promise<Order> => {
-    // ✅ ИСПРАВЛЕНО: patch вместо put для частичного обновления
     const { data } = await axiosInstance.patch<Order>(`/orders/${id}/`, { status });
     return data;
   },
