@@ -10,11 +10,10 @@ import '../index.css';
 
 interface CartProps {
   onAuthRequired?: () => void;
-  onLogout: () => void; // ✅ Добавляем
+  onLogout: () => void;
 }
 
 export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
-  // ✅ Деструктуризируем
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -82,7 +81,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
   if (loading && !draftOrder) {
     return (
       <div>
-        {/* ✅ Передаём реальный onLogout */}
         <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
@@ -94,7 +92,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
   if (!user || !draftOrder) {
     return (
       <div>
-        {/* ✅ Передаём реальный onLogout */}
         <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ paddingTop: '20px' }}>
           <Breadcrumbs />
@@ -123,7 +120,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
   if (items.length === 0) {
     return (
       <div>
-        {/* ✅ Передаём реальный onLogout */}
         <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ paddingTop: '20px' }}>
           <Breadcrumbs />
@@ -147,7 +143,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
 
   return (
     <div>
-      {/* ✅ Передаём реальный onLogout */}
       <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />

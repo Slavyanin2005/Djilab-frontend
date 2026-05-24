@@ -9,7 +9,7 @@ import '../index.css';
 
 interface ProfileProps {
   onAuthRequired?: () => void;
-  onLogout: () => void; // ✅ Глобальный logout из App.tsx (уже делает редирект)
+  onLogout: () => void;
 }
 
 export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) => {

@@ -20,7 +20,6 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
 
-// ✅ Отдельный компонент для прокрутки — работает ВНУТРИ BrowserRouter
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -29,7 +28,6 @@ const ScrollToTop: React.FC = () => {
   return null;
 };
 
-// ✅ Основной контент — работает ВНУТРИ BrowserRouter (useNavigate доступен)
 function AppContent() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -43,7 +41,6 @@ function AppContent() {
     dispatch(checkAuth());
   }, [dispatch]);
 
-  // ✅ Загружаем корзину при появлении пользователя
   useEffect(() => {
     if (isInitialized && user) {
       dispatch(loadCart());
@@ -63,16 +60,14 @@ function AppContent() {
       await pendingAction();
       setPendingAction(null);
     }
-    // ✅ НЕ вызываем loadCart() — useEffect выше уже загрузит корзину
   };
 
-  // ✅ ИСПРАВЛЕНО: плавный редирект через navigate
   const handleLogout = async () => {
     await dispatch(logoutAction());
     dispatch(clearCart());
     dispatch(clearOrders());
     dispatch(loadCart()); // Для гостя вернёт {id: null, items_count: 0}
-    navigate('/'); // ✅ Плавный переход без перезагрузки
+    navigate('/');
   };
 
   const handleLogin = async (username: string, password: string) => {
@@ -83,9 +78,6 @@ function AppContent() {
     await dispatch(registerAction(data)).unwrap();
   };
 
-  // ✅ ИСПРАВЛЕНО: НЕ блокируем рендер из-за cartLoading
-  // Приложение рендерится сразу после инициализации авторизации
-  // Корзина грузится в фоне — Header покажет (0) или старое значение, потом обновится
   if (!isInitialized) {
     return (
       <div style={{ padding: '100px', textAlign: 'center', minHeight: '100vh' }}>
@@ -110,7 +102,6 @@ function AppContent() {
         />
       )}
 
-      {/* ✅ УБРАЛИ key — Header обновляется через props, а не пересоздаётся */}
       <Header onLogout={handleLogout} onAuthRequired={handleAuthRequired} />
 
       <Routes>
@@ -134,7 +125,6 @@ function AppContent() {
   );
 }
 
-// ✅ Главный App — только оборачивает AppContent в BrowserRouter
 function App() {
   return (
     <BrowserRouter>

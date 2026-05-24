@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'; // ✅ Добавляем useRef
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../store';
@@ -12,10 +12,8 @@ export const OrdersHistory: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { orders, loading } = useSelector((state: RootState) => state.orders);
 
-  // ✅ Реф для хранения ID интервала polling
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 🔹 Основной эффект: загрузка при изменении пользователя
   useEffect(() => {
     if (user) {
       dispatch(fetchOrders());
@@ -24,27 +22,23 @@ export const OrdersHistory: React.FC = () => {
     }
   }, [dispatch, user]);
 
-  // 🔹 Short polling: обновляем список каждые 30 секунд ТОЛЬКО для модератора
   useEffect(() => {
     // Запускаем polling только если пользователь — модератор
     if (user?.is_staff) {
-      // ✅ Сразу делаем первый запрос, чтобы не ждать 30 секунд
       dispatch(fetchOrders());
 
-      // ✅ Устанавливаем интервал
       pollingIntervalRef.current = setInterval(() => {
         dispatch(fetchOrders());
       }, 30000); // 30 секунд
     }
 
-    // ✅ Очистка интервала при размонтировании или смене пользователя
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
     };
-  }, [dispatch, user?.is_staff]); // ✅ Зависим только от is_staff
+  }, [dispatch, user?.is_staff]);
 
   const getStatusClass = (status: string): string => {
     const classes: { [key: string]: string } = {

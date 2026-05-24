@@ -23,7 +23,6 @@ export const Home: React.FC<HomeProps> = ({ onAuthRequired }) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { services, loading, filters } = useSelector((state: RootState) => state.services);
 
-  // ✅ Реф для пропуска первого вызова в useEffect фильтров
   const isInitialMount = useRef(true);
 
   // Загрузка товаров при монтировании
@@ -31,15 +30,12 @@ export const Home: React.FC<HomeProps> = ({ onAuthRequired }) => {
     dispatch(fetchServices());
   }, [dispatch]);
 
-  // ✅ НОВЫЙ useEffect: перезагружает товары при изменении фильтров
   useEffect(() => {
-    // Пропускаем первый рендер (уже загружено выше)
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    // Debounce: ждём 300мс после изменения фильтра
     const timer = setTimeout(() => {
       dispatch(fetchServices());
     }, 300);

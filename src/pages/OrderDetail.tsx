@@ -36,7 +36,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     };
   }, [dispatch, id]);
 
-  // ✅ Проверка прав: модератор ИЛИ создатель заявки
   const isModerator = user?.is_staff;
   const isCreator = currentOrder?.creator?.id === user?.id;
 
@@ -89,7 +88,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     );
   }
 
-  // ✅ ИСПРАВЛЕНО: убран confirm(), статус меняется сразу
   const handleStatusChange = async (newStatus: Order['status']) => {
     setIsSubmitting(true);
     try {
@@ -146,12 +144,9 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     deleted: [],
   };
 
-  // ✅ Только модератор может менять статус
   const canChangeStatus = isModerator;
-  // ✅ Комментарий могут добавлять и модератор, и создатель
   const canAddComment = isModerator || isCreator;
 
-  // ✅ Безопасное отображение модератора (обход unknown)
   const getModeratorDisplay = (): string => {
     const mod = currentOrder.moderator;
     if (!mod) return 'Не назначен';
@@ -159,7 +154,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     return 'Неизвестно';
   };
 
-  // ✅ Безопасное отображение комментариев (простой текст, без парсинга)
   const renderComments = () => {
     if (!currentOrder.comment) return null;
     const lines = currentOrder.comment.split('\n').filter((line: string) => line.trim());
@@ -314,7 +308,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
               )}
             </section>
 
-            {/* Комментарии — только если можно добавлять */}
             {canAddComment && (
               <section
                 style={{
@@ -326,10 +319,8 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
               >
                 <h3 style={{ marginBottom: '20px', fontSize: '1.3rem' }}>💬 Комментарий</h3>
 
-                {/* Отображение существующих комментариев */}
                 {renderComments()}
 
-                {/* Форма добавления */}
                 <form onSubmit={handleAddComment} style={{ display: 'flex', gap: '12px' }}>
                   <textarea
                     value={newComment}
@@ -360,7 +351,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
             )}
           </div>
 
-          {/* Правая колонка: управление */}
           <aside>
             <section
               style={{
