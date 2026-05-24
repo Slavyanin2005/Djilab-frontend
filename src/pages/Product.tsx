@@ -8,7 +8,6 @@ import { addToCart } from '../store/slices/cartSlice'; // ← addToCart, не ad
 import { api } from '../services/api';
 import type { Service } from '../types';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductCard } from '../components/ProductCard';
 import '../index.css';
@@ -137,7 +136,6 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) =>
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
-        <Footer />
       </div>
     );
   }
@@ -149,7 +147,6 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) =>
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Товар не найден
         </div>
-        <Footer />
       </div>
     );
   }
@@ -282,7 +279,6 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) =>
           )}
         </section>
       </main>
-      <Footer />
     </div>
   );
 };

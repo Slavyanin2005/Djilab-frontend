@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store';
 import { fetchUserProfile, updateProfile, changePassword } from '../store/slices/authSlice';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import '../index.css';
 
@@ -123,7 +122,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка профиля...
         </div>
-        <Footer />
       </div>
     );
   }
@@ -357,8 +355,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

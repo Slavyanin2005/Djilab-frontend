@@ -9,7 +9,6 @@ import {
   clearCurrentOrder,
 } from '../store/slices/ordersSlice';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import type { Order, OrderItem } from '../types';
 import '../index.css';
@@ -56,7 +55,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
             ← Вернуться к списку
           </Link>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -68,7 +66,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
         <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
           Загрузка...
         </main>
-        <Footer />
       </div>
     );
   }
@@ -88,7 +85,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
             ← Вернуться к списку
           </Link>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -470,8 +466,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
           </aside>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

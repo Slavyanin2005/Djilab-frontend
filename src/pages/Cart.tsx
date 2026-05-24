@@ -4,7 +4,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { updateQuantity, removeItem, deleteOrder, formOrder } from '../store/slices/cartSlice';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import type { OrderItem } from '../types';
 import '../index.css';
@@ -88,7 +87,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
-        <Footer />
       </div>
     );
   }
@@ -118,7 +116,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -144,7 +141,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -257,7 +253,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
