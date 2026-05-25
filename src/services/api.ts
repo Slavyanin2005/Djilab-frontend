@@ -21,18 +21,16 @@ async function cachedRequest<T>(key: string, requestFn: () => Promise<T>): Promi
   return data;
 }
 
-// ✅ Helper для имитации задержки сети (для моков)
 const delay = (ms: number = 500) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ✅ Helper: проверяем, можно ли использовать fallback на мок
 const isNetworkError = (error: any): boolean => {
-  // Возвращаем true, если ошибка связана с сетью или бэкендом
   return (
-    !error.response || // Нет ответа от сервера (таймаут, нет сети)
-    error.response?.status >= 500 || // Ошибка сервера
+    !error.response ||
+    error.response?.status >= 404 ||
     error.code === 'ERR_NETWORK' ||
     error.code === 'ECONNREFUSED' ||
-    error.message?.includes('Network Error')
+    error.message?.includes('Network Error') ||
+    error.message?.includes('Request failed with status code 404')
   );
 };
 
@@ -55,7 +53,6 @@ export const api = {
           is_staff: username === 'admin',
         };
       }
-      // Если ошибка не сетевая (например, 401), пробрасываем дальше
       throw error;
     }
   },
@@ -86,7 +83,6 @@ export const api = {
       if (!isNetworkError(error)) {
         throw error;
       }
-      // Если бэкенд недоступен — просто завершаем "успешно"
       console.warn('⚠️ Backend unavailable, mock logout');
     }
   },
