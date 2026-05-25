@@ -10,6 +10,7 @@ export interface AuthState {
   profileLoading: boolean;
   error: string | null;
   profileError: string | null;
+  registrationSuccess: boolean;
 }
 
 const initialState: AuthState = {
@@ -20,6 +21,7 @@ const initialState: AuthState = {
   profileLoading: false,
   error: null,
   profileError: null,
+  registrationSuccess: false,
 };
 
 export const login = createAsyncThunk<User, { username: string; password: string }>(
@@ -105,6 +107,9 @@ const authSlice = createSlice({
     clearProfileError: (state) => {
       state.profileError = null;
     },
+    clearRegistrationSuccess: (state) => {
+      state.registrationSuccess = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -116,6 +121,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload;
         state.isInitialized = true;
+        state.registrationSuccess = false;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -125,11 +131,12 @@ const authSlice = createSlice({
       .addCase(register.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.registrationSuccess = false;
       })
-      .addCase(register.fulfilled, (state, action) => {
+      .addCase(register.fulfilled, (state, _) => {
         state.isLoading = false;
-        state.user = action.payload;
         state.isInitialized = true;
+        state.registrationSuccess = true; //
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -152,6 +159,7 @@ const authSlice = createSlice({
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.profile = null;
+        state.registrationSuccess = false;
       })
       .addCase(fetchUserProfile.pending, (state) => {
         state.profileLoading = true;
@@ -171,5 +179,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, clearProfileError } = authSlice.actions;
+export const { clearError, clearProfileError, clearRegistrationSuccess } = authSlice.actions;
 export default authSlice.reducer;

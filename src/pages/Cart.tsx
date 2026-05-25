@@ -6,12 +6,23 @@ import { updateQuantity, removeItem, deleteOrder, formOrder } from '../store/sli
 import { Header } from '../components/Header';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import type { OrderItem } from '../types';
+import { DEFAULT_IMAGE, MEDIA_URL } from '../mocks/services';
 import '../index.css';
 
 interface CartProps {
   onAuthRequired?: () => void;
   onLogout: () => void;
 }
+
+const getServiceImage = (imageKey: string | null): string => {
+  if (!imageKey) return DEFAULT_IMAGE;
+  // Если уже data URL — возвращаем как есть
+  if (imageKey.startsWith('data:')) return imageKey;
+  // Если полный HTTP URL — возвращаем как есть
+  if (imageKey.startsWith('http')) return imageKey;
+  // Иначе собираем путь к MinIO
+  return `${MEDIA_URL}${imageKey}`;
+};
 
 export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -163,52 +174,62 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item: OrderItem) => (
-                      <tr key={item.id}>
-                        <td>
-                          <div className="item-info">
-                            <img
-                              src={`http://localhost:9000/djilab-products/${item.service.image_key}`}
-                              alt={item.service.name}
-                              className="item-img"
-                            />
-                            <div>
-                              <h3>{item.service.name}</h3>
-                              <small>{item.service.category}</small>
+                    {items.map((item: OrderItem) => {
+                      const imageUrl = getServiceImage(item.service.image_key);
+
+                      return (
+                        <tr key={item.id}>
+                          <td>
+                            <div className="item-info">
+                              <img
+                                src={imageUrl}
+                                alt={item.service.name}
+                                className="item-img"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  if (target.src !== DEFAULT_IMAGE) {
+                                    target.src = DEFAULT_IMAGE;
+                                  }
+                                }}
+                              />
+                              <div>
+                                <h3>{item.service.name}</h3>
+                                <small>{item.service.category}</small>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="item-price">{item.service.price} ₽</td>
-                        <td>
-                          <div className="quantity-control">
+                          </td>
+                          <td className="item-price">{item.service.price} ₽</td>
+                          <td>
+                            <div className="quantity-control">
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, 'decrease')}
+                                type="button"
+                              >
+                                −
+                              </button>
+                              <input type="number" value={item.quantity} readOnly />
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, 'increase')}
+                                type="button"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="item-total">{item.subtotal} ₽</td>
+                          <td>
                             <button
-                              onClick={() => handleUpdateQuantity(item.id, 'decrease')}
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="remove-btn"
+                              title="Удалить"
                               type="button"
                             >
-                              −
+                              ×
                             </button>
-                            <input type="number" value={item.quantity} readOnly />
-                            <button
-                              onClick={() => handleUpdateQuantity(item.id, 'increase')}
-                              type="button"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-                        <td className="item-total">{item.subtotal} ₽</td>
-                        <td>
-                          <button
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="remove-btn"
-                            title="Удалить"
-                            type="button"
-                          >
-                            ×
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 <Link to="/" className="continue-shopping">
