@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/Djilab-frontend/sw.js', { scope: '/Djilab-frontend/' })})}
