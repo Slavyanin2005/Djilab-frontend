@@ -1,207 +1,171 @@
-import axios from 'axios';
-import type { AxiosError } from 'axios';
-import type { Service, Order, UserProfile, RegisterData, AuthResponse } from '../types';
+import { axiosInstance } from './axios';
+import type { Service, Order, User, RegisterData, UserProfile } from '../types';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+// Простой кэш в памяти ключ → { данные, время_сохранения }
+const cache: Record<string, { data: any; timestamp: number }> = {};
+const CACHE_TTL = 120000; // 2 минуты в миллисекундах
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
+async function cachedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const cached = cache[key];
 
-// Перехватчик для добавления CSRF-токена
-api.interceptors.request.use((config) => {
-  const csrfToken = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('csrftoken='))
-    ?.split('=')[1];
-
-  if (csrfToken) {
-    config.headers['X-CSRFToken'] = csrfToken;
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    console.log(`CACHE HIT (frontend): ${key}`);
+    return cached.data as T;
   }
-  return config;
-});
 
-export const apiService = {
-  // ==================== УСЛУГИ ====================
+  console.log(`CACHE MISS (frontend): ${key}`);
+  const data = await requestFn();
+  cache[key] = { data, timestamp: now };
+  return data;
+}
 
-  getServices: async (params?: {
-    search?: string;
-    ordering?: string;
-    category?: string;
-  }): Promise<Service[]> => {
-    const response = await api.get('/services/', { params });
-    return response.data;
-  },
-
-  getService: async (id: number): Promise<Service> => {
-    const response = await api.get(`/services/${id}/`);
-    return response.data;
-  },
-
-  createService: async (formData: FormData): Promise<Service> => {
-    const response = await api.post('/services/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+export const api = {
+  login: async (username: string, password: string): Promise<User> => {
+    const { data } = await axiosInstance.post<User>('/profiles/login/', {
+      username,
+      password,
     });
-    return response.data;
+    return data;
   },
 
-  // ==================== ЗАЯВКИ (ОСНОВНЫЕ) ====================
-
-  getOrders: async (params?: {
-    status?: string;
-    date_from?: string;
-    date_to?: string;
-  }): Promise<Order[]> => {
-    const response = await api.get('/orders/', { params });
-    return response.data;
+  register: async (data: RegisterData): Promise<User> => {
+    const { data: res } = await axiosInstance.post<User>('/profiles/register/', data);
+    return res;
   },
 
-  getOrder: async (id: number): Promise<Order> => {
-    const response = await api.get(`/orders/${id}/`);
-    return response.data;
+  logout: async (): Promise<void> => {
+    await axiosInstance.post('/profiles/logout/');
   },
 
-  // ==================== КОРЗИНА ====================
-
-  getCartIcon: async (): Promise<{ id: number | null; items_count: number }> => {
-    const response = await api.get('/orders/cart_icon/');
-    return response.data;
-  },
-
-  // ==================== ПОЗИЦИИ ЗАЯВКИ (M2M без PK) ====================
-
-  addItemToOrder: async (
-    orderId: number,
-    serviceId: number,
-    quantity: number = 1
-  ): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/add_item/`, {
-      service_id: serviceId,
-      quantity,
-    });
-    return response.data;
-  },
-
-  updateItemInOrder: async (orderId: number, itemId: number, quantity: number): Promise<Order> => {
-    const action = quantity > 1 ? 'increase' : 'decrease';
-    const response = await api.post(`/orders/${orderId}/update_item/`, {
-      item_id: itemId,
-      action,
-    });
-    return response.data;
-  },
-
-  removeItemFromOrder: async (orderId: number, itemId: number): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/remove_item_legacy/`, {
-      item_id: itemId,
-    });
-    return response.data;
-  },
-
-  // ==================== СТАТУСЫ ЗАЯВКИ ====================
-
-  formOrder: async (orderId: number): Promise<Order> => {
-    const response = await api.put(`/orders/${orderId}/form/`);
-    return response.data;
-  },
-
-  completeOrder: async (
-    orderId: number,
-    action: 'complete' | 'reject' = 'complete'
-  ): Promise<Order> => {
-    const response = await api.put(`/orders/${orderId}/complete/`, { action });
-    return response.data;
-  },
-
-  updateOrder: async (orderId: number, data: Partial<Pick<Order, 'comment'>>): Promise<Order> => {
-    const response = await api.patch(`/orders/${orderId}/`, data);
-    return response.data;
-  },
-
-  deleteOrder: async (orderId: number): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/delete/`);
-    return response.data;
-  },
-
-  // ==================== ПОЛЬЗОВАТЕЛЬ ====================
-
-  getProfile: async (): Promise<UserProfile | null> => {
+  getCurrentUser: async (): Promise<User | null> => {
     try {
-      const response = await api.get('/profiles/');
-      return response.data[0] || null;
+      const { data } = await axiosInstance.get<User>('/profiles/me/');
+      return data;
+    } catch (error: any) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return null;
+      }
+      console.warn('Auth check failed:', error.message);
+      return null;
+    }
+  },
+
+  getUserProfile: async (): Promise<UserProfile | null> => {
+    try {
+      const { data } = await axiosInstance.get<UserProfile>('/profiles/me/');
+      return data;
     } catch {
       return null;
     }
   },
 
-  register: async (data: RegisterData): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/profiles/register/', data);
-      return response.data;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Registration error:', err.response?.data || err.message || error);
-      throw error;
-    }
+  updateUserProfile: async (
+    data: Partial<Pick<UserProfile, 'phone' | 'company' | 'position'>>
+  ): Promise<UserProfile> => {
+    const { data: res } = await axiosInstance.put<UserProfile>('/profiles/me/', data);
+    return res;
   },
 
-  login: async (username: string): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/profiles/login/', { username });
-      return response.data;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Login error:', err.response?.data || err.message || error);
-      throw error;
-    }
+  changeUserPassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await axiosInstance.put('/profiles/me/change_password/', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
   },
 
-  logout: async (): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/profiles/logout/');
-      return response.data;
-    } catch (error) {
-      const err = error as AxiosError;
-      console.error('Logout error:', err.response?.data || err.message || error);
-      throw error;
-    }
+  getServices: async (params?: {
+    search?: string;
+    min_price?: string;
+    max_price?: string;
+    category?: string;
+  }): Promise<Service[]> => {
+    const cacheKey = `services:${JSON.stringify(params || {})}`;
+
+    return cachedRequest(cacheKey, async () => {
+      const { data } = await axiosInstance.get<Service[]>('/services/', { params });
+      return data;
+    });
   },
 
-  // ==================== 🔙 ОБРАТНАЯ СОВМЕСТИМОСТЬ (алиасы) ====================
-
-  createOrder: async (): Promise<Order> => {
-    return { id: null as unknown as number, items_count: 0, status: 'draft', total: '0' } as Order;
+  getService: async (id: number): Promise<Service> => {
+    const { data } = await axiosInstance.get<Service>(`/services/${id}/`);
+    return data;
   },
 
-  addToOrder: async (_orderId: number, serviceId: number, quantity: number = 1): Promise<Order> => {
-    const response = await api.post(`/services/${serviceId}/add_to_order/`, { quantity });
-    return response.data;
+  getSimilarServices: async (id: number, limit = 4): Promise<Service[]> => {
+    const { data } = await axiosInstance.get<Service[]>(`/services/${id}/similar/`, {
+      params: { limit },
+    });
+    return data;
   },
 
-  updateQuantity: async (
-    orderId: number,
-    itemId: number,
-    action: 'increase' | 'decrease'
+  getCartIcon: async (): Promise<{ id: number | null; items_count: number }> => {
+    const { data } = await axiosInstance.get('/orders/cart_icon/');
+    return data;
+  },
+
+  addToOrder: async (serviceId: number, quantity = 1): Promise<Order> => {
+    const { data } = await axiosInstance.post<Order>(`/services/${serviceId}/add_to_order/`, {
+      quantity,
+    });
+    return data;
+  },
+
+  getOrders: async (params?: {
+    status?: 'draft' | 'formed' | 'completed' | 'rejected' | 'deleted';
+    date_from?: string;
+    date_to?: string;
+  }): Promise<Order[]> => {
+    const { data } = await axiosInstance.get<Order[]>('/orders/', { params });
+    return data;
+  },
+
+  getOrder: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.get<Order>(`/orders/${id}/`);
+    return data;
+  },
+
+  updateOrderItem: async (orderId: number, serviceId: number, quantity: number): Promise<Order> => {
+    const { data } = await axiosInstance.put<Order>(`/orders/${orderId}/update_item/`, {
+      service_id: serviceId,
+      quantity,
+    });
+    return data;
+  },
+
+  removeItemFromOrder: async (orderId: number, serviceId: number): Promise<Order> => {
+    const { data } = await axiosInstance.delete<Order>(`/orders/${orderId}/items/${serviceId}/`);
+    return data;
+  },
+
+  deleteOrder: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.post<Order>(`/orders/${id}/delete/`);
+    return data;
+  },
+
+  formOrder: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.put<Order>(`/orders/${id}/form/`);
+    return data;
+  },
+
+  changeOrderStatus: async (
+    id: number,
+    status: 'draft' | 'formed' | 'completed' | 'rejected' | 'deleted'
   ): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/update_item_legacy/`, {
-      item_id: itemId,
-      action,
-    });
-    return response.data;
+    const { data } = await axiosInstance.patch<Order>(`/orders/${id}/`, { status });
+    return data;
   },
 
-  _removeItemLegacy: async (orderId: number, itemId: number): Promise<Order> => {
-    const response = await api.post(`/orders/${orderId}/remove_item/`, {
-      item_id: itemId,
-    });
-    return response.data;
+  addOrderComment: async (id: number, comment: string): Promise<Order> => {
+    const { data } = await axiosInstance.patch<Order>(`/orders/${id}/`, { comment });
+    return data;
   },
 
-  submitOrder: async (orderId: number): Promise<Order> => {
-    return await apiService.formOrder(orderId);
+  getOrderDetails: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.get<Order>(`/orders/${id}/`);
+    return data;
   },
 };
+
+export const apiService = api;

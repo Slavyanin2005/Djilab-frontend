@@ -36,7 +36,6 @@ export interface AuthResponse {
   username?: string;
   id?: number;
   is_staff?: boolean;
-  token?: string;
 }
 
 export interface OrderItem {
@@ -66,7 +65,7 @@ export interface Order {
   created_at: string;
   formed_at: string | null;
   completed_at: string | null;
-  moderator: unknown | null;
+  moderator: number | null;
   total: string;
   items_count: number;
   comment: string;
@@ -85,10 +84,3 @@ export interface UserProfile {
   position: string;
   created_at: string;
 }
-
-export type CartContextType = {
-  cartCount: number;
-  draftOrder: Order | null;
-  loading: boolean;
-  refreshCart: () => Promise<void>;
-};

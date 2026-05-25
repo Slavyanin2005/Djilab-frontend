@@ -1,32 +1,43 @@
-import { useEffect, useState, useCallback } from 'react';
-import { apiService } from '../services/api';
-import type { Order } from '../types';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
-import { useCartContext } from '../hooks/useCartContext';
+import { useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import type { AppDispatch, RootState } from '../store';
+import { fetchOrders, clearOrders } from '../store/slices/ordersSlice';
+import { Breadcrumbs } from '../components/Breadcrumbs';
+import type { User } from '../types';
 import '../index.css';
 
 export const OrdersHistory: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { refreshCart } = useCartContext();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { orders, loading } = useSelector((state: RootState) => state.orders);
 
-  // ✅ Оборачиваем loadOrders в useCallback
-  const loadOrders = useCallback(async () => {
-    try {
-      const data = await apiService.getOrders();
-      setOrders(data);
-      await refreshCart();
-    } catch (error) {
-      console.error('Failed to load orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshCart]); // ← Зависимость: refreshCart
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]); // ← Теперь зависимость стабильная
+    if (user) {
+      dispatch(fetchOrders());
+    } else {
+      dispatch(clearOrders());
+    }
+  }, [dispatch, user]);
+
+  useEffect(() => {
+    if (user?.is_staff) {
+      dispatch(fetchOrders());
+
+      pollingIntervalRef.current = setInterval(() => {
+        dispatch(fetchOrders());
+      }, 30000); // 30 секунд
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [dispatch, user?.is_staff]);
 
   const getStatusClass = (status: string): string => {
     const classes: { [key: string]: string } = {
@@ -41,24 +52,22 @@ export const OrdersHistory: React.FC = () => {
 
   if (loading) {
     return (
-      <div>
-        <Header />
-        <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
-          Загрузка...
-        </div>
-        <Footer />
+      <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
+        Загрузка...
       </div>
     );
   }
 
   return (
-    <div>
-      <Header />
-
+    <>
+      <div className="container" style={{ paddingTop: '20px' }}>
+        <Breadcrumbs />
+      </div>
       <main className="container">
         <div className="cart-page">
-          <h1 className="section-title">Мои заявки</h1>
-
+          <h1 className="section-title">
+            {(user as User | null)?.is_staff ? 'Все заявки системы' : 'Мои заявки'}
+          </h1>
           {orders.length > 0 ? (
             <div className="cart-content">
               <table className="cart-table">
@@ -66,19 +75,31 @@ export const OrdersHistory: React.FC = () => {
                   <tr>
                     <th>№ Заявки</th>
                     <th>Дата создания</th>
+                    <th>Создатель</th>
                     <th>Статус</th>
                     <th>Товаров</th>
                     <th>Сумма</th>
-                    <th>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order) => (
                     <tr key={order.id}>
                       <td>
-                        <strong>#{order.id}</strong>
+                        <Link
+                          to={`/orders/${order.id}`}
+                          style={{
+                            color: 'var(--dji-blue)',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                          onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                        >
+                          #{order.id}
+                        </Link>
                       </td>
                       <td>{new Date(order.created_at).toLocaleString('ru-RU')}</td>
+                      <td>{order.creator ? order.creator.username : 'Неизвестно'}</td>
                       <td>
                         <span className={getStatusClass(order.status)}>
                           {order.status_display || order.status}
@@ -88,43 +109,26 @@ export const OrdersHistory: React.FC = () => {
                       <td>
                         <strong>{order.total} ₽</strong>
                       </td>
-                      <td>
-                        {order.status === 'draft' ? (
-                          <a
-                            href="/cart"
-                            className="btn-primary"
-                            style={{ padding: '8px 16px', fontSize: '0.9rem' }}
-                          >
-                            Открыть
-                          </a>
-                        ) : (
-                          <span style={{ color: 'var(--light-gray)', fontSize: '0.9rem' }}>
-                            Просмотр
-                          </span>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <a href="/" className="continue-shopping">
+              <Link to="/" className="continue-shopping">
                 ← Вернуться в каталог
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="cart-empty">
               <div className="cart-empty-icon">📋</div>
               <h2>У вас пока нет заявок</h2>
               <p>Добавьте товары из каталога, чтобы создать первую заявку</p>
-              <a href="/" className="btn-primary">
+              <Link to="/" className="btn-primary">
                 Перейти в каталог
-              </a>
+              </Link>
             </div>
           )}
         </div>
       </main>
-
-      <Footer />
-    </div>
+    </>
   );
 };

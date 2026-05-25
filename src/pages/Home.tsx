@@ -1,75 +1,75 @@
-import { useEffect, useState, useCallback } from 'react';
-import { apiService } from '../services/api';
-import type { Service } from '../types';
+import { useEffect, useCallback, useRef, type SyntheticEvent } from 'react'; // ✅ Добавляем useRef
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../store';
+import {
+  fetchServices,
+  setSearch,
+  setMinPrice,
+  setMaxPrice,
+  resetFilters,
+} from '../store/slices/servicesSlice';
+import { addToCart } from '../store/slices/cartSlice';
 import { ProductCard } from '../components/ProductCard';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
-import { useCartContext } from '../hooks/useCartContext';
+import { Breadcrumbs } from '../components/Breadcrumbs';
+import type { Service } from '../types';
 import '../index.css';
 
-export const Home: React.FC = () => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { refreshCart } = useCartContext();
+interface HomeProps {
+  onAuthRequired: (action?: () => Promise<void>) => void;
+}
+
+export const Home: React.FC<HomeProps> = ({ onAuthRequired }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { services, loading, filters } = useSelector((state: RootState) => state.services);
+
+  const isInitialMount = useRef(true);
+
+  // Загрузка товаров при монтировании
+  useEffect(() => {
+    dispatch(fetchServices());
+  }, [dispatch]);
 
   useEffect(() => {
-    loadServices();
-  }, []);
-
-  // ✅ Оборачиваем filterServices в useCallback
-  const filterServices = useCallback(() => {
-    if (!searchQuery.trim()) {
-      setFilteredServices(services);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
       return;
     }
-    const query = searchQuery.toLowerCase();
-    const filtered = services.filter(
-      (service) =>
-        service.name.toLowerCase().includes(query) ||
-        service.category.toLowerCase().includes(query) ||
-        service.description.toLowerCase().includes(query)
-    );
-    setFilteredServices(filtered);
-  }, [searchQuery, services]); // ← Зависимости
 
-  useEffect(() => {
-    filterServices();
-  }, [filterServices]); // ← Теперь зависимость стабильная
+    const timer = setTimeout(() => {
+      dispatch(fetchServices());
+    }, 300);
 
-  const loadServices = async () => {
-    try {
-      const data = await apiService.getServices();
-      setServices(data);
-      setFilteredServices(data);
-    } catch (error) {
-      console.error('Failed to load services:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [dispatch, filters.search, filters.minPrice, filters.maxPrice]);
 
-  const handleAddToCart = async (serviceId: number) => {
-    try {
-      const orders = await apiService.getOrders();
-      let order = orders.find((o) => o.status === 'draft');
+  const handleAddToCart = useCallback(
+    async (serviceId: number) => {
+      const addToCartAction = async () => {
+        await dispatch(addToCart({ serviceId, quantity: 1 }));
+      };
 
-      if (!order) {
-        order = await apiService.createOrder();
+      if (!user) {
+        onAuthRequired(addToCartAction);
+        return;
       }
+      await addToCartAction();
+    },
+    [user, dispatch, onAuthRequired]
+  );
 
-      await apiService.addToOrder(order.id, serviceId, 1);
-      await refreshCart();
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-    }
+  const handleSearch = (e: SyntheticEvent) => {
+    e.preventDefault();
+    dispatch(fetchServices());
   };
+
+  const hasActiveFilters = filters.search || filters.minPrice || filters.maxPrice;
 
   return (
-    <div>
-      <Header />
-
+    <>
+      <div className="container" style={{ paddingTop: '20px' }}>
+        <Breadcrumbs />
+      </div>
       <section className="hero">
         <div className="hero-content">
           <h1>
@@ -83,20 +83,18 @@ export const Home: React.FC = () => {
           </a>
         </div>
       </section>
-
       <main className="container">
         <h2 className="section-title" id="catalog">
           Каталог
         </h2>
-
         <div className="search-wrapper">
-          <form className="search-form" onSubmit={(e) => e.preventDefault()}>
+          <form className="search-form" onSubmit={handleSearch}>
             <input
               type="text"
               className="search-input"
               placeholder="Найти товар..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={filters.search}
+              onChange={(e) => dispatch(setSearch(e.target.value))}
             />
             <button type="submit" className="search-btn" aria-label="Найти">
               <svg
@@ -113,26 +111,49 @@ export const Home: React.FC = () => {
             </button>
           </form>
         </div>
-
+        <div className="price-filters">
+          <input
+            type="number"
+            className="filter-input"
+            placeholder="От, ₽"
+            value={filters.minPrice}
+            onChange={(e) => dispatch(setMinPrice(e.target.value))}
+            min="0"
+            step="100"
+          />
+          <span className="separator">—</span>
+          <input
+            type="number"
+            className="filter-input"
+            placeholder="До, ₽"
+            value={filters.maxPrice}
+            onChange={(e) => dispatch(setMaxPrice(e.target.value))}
+            min="0"
+            step="100"
+          />
+          {hasActiveFilters && (
+            <button onClick={() => dispatch(resetFilters())} className="btn-secondary">
+              Сбросить
+            </button>
+          )}
+        </div>
         {loading ? (
           <p style={{ textAlign: 'center', padding: '60px' }}>Загрузка...</p>
-        ) : filteredServices.length > 0 ? (
+        ) : services.length > 0 ? (
           <div className="products-grid">
-            {filteredServices.map((service) => (
+            {services.map((service: Service) => (
               <ProductCard key={service.id} service={service} onAddToCart={handleAddToCart} />
             ))}
           </div>
         ) : (
           <div className="search-no-results">
-            <p>Ничего не найдено по запросу «{searchQuery}»</p>
-            <button onClick={() => setSearchQuery('')} className="btn-secondary">
-              Сбросить поиск
+            <p>Ничего не найдено по выбранным фильтрам</p>
+            <button onClick={() => dispatch(resetFilters())} className="btn-secondary">
+              Сбросить фильтры
             </button>
           </div>
         )}
       </main>
-
-      <Footer />
-    </div>
+    </>
   );
 };

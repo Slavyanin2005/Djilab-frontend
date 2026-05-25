@@ -1,19 +1,34 @@
-import { useEffect, useState } from 'react';
+// src/pages/Product.tsx
+import { findSimilarServices } from '../utils/embeddings';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiService } from '../services/api';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState, AppDispatch } from '../store';
+import { addToCart } from '../store/slices/cartSlice'; // ← addToCart, не addToOrder!
+import { api } from '../services/api';
 import type { Service } from '../types';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
-import { useCartContext } from '../hooks/useCartContext';
+import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ProductCard } from '../components/ProductCard';
 import '../index.css';
 
-export const Product: React.FC = () => {
+interface ProductProps {
+  onAuthRequired?: () => void;
+  onLogout: () => void;
+}
+
+export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) => {
   const { id } = useParams<{ id: string }>();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+
   const [service, setService] = useState<Service | null>(null);
+  const [similarServices, setSimilarServices] = useState<Service[]>([]);
+  const [allServices, setAllServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const { refreshCart } = useCartContext();
 
   useEffect(() => {
     if (id) {
@@ -21,9 +36,27 @@ export const Product: React.FC = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    const loadAllServices = async () => {
+      try {
+        const services = await api.getServices({});
+        setAllServices(services);
+      } catch (error) {
+        console.error('Failed to load all services:', error);
+      }
+    };
+    loadAllServices();
+  }, []);
+
+  useEffect(() => {
+    if (service && allServices.length > 0) {
+      loadSimilarServices();
+    }
+  }, [service, allServices]);
+
   const loadService = async (serviceId: number) => {
     try {
-      const data = await apiService.getService(serviceId);
+      const data = await api.getService(serviceId);
       setService(data);
     } catch (error) {
       console.error('Failed to load service:', error);
@@ -32,38 +65,75 @@ export const Product: React.FC = () => {
     }
   };
 
-  const handleAddToCart = async () => {
+  const loadSimilarServices = async () => {
+    if (!service || allServices.length === 0) {
+      setLoadingSimilar(false);
+      return;
+    }
+    setLoadingSimilar(true);
+    let loaded = false;
+    try {
+      const response = await fetch(`/api/services/${service.id}/similar/?limit=4`);
+      if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+        const similar = await response.json();
+        if (similar.length > 0) {
+          setSimilarServices(similar);
+          loaded = true;
+        }
+      }
+    } catch {}
+    if (!loaded) {
+      try {
+        const similar = await findSimilarServices(service, allServices, 4);
+        setSimilarServices(similar);
+        loaded = true;
+      } catch {}
+    }
+    if (!loaded && allServices.length > 0) {
+      const random = allServices
+        .filter((s) => s.id !== service.id)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 4);
+      setSimilarServices(random);
+    }
+    setLoadingSimilar(false);
+  };
+
+  const executeAddToCart = async () => {
     if (!service) return;
     try {
-      const orders = await apiService.getOrders();
-      let order = orders.find((o) => o.status === 'draft');
+      await dispatch(
+        addToCart({
+          serviceId: service.id,
+          quantity,
+        })
+      ).unwrap();
 
-      if (!order) {
-        order = await apiService.createOrder();
-      }
-
-      await apiService.addToOrder(order.id, service.id, quantity);
-      await refreshCart();
+      setQuantity(1);
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }
   };
 
+  const handleAddToCart = async () => {
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
+    await executeAddToCart();
+  };
+
   const updateQuantity = (change: number) => {
-    setQuantity((prev) => {
-      const newValue = prev + change;
-      return Math.max(1, Math.min(99, newValue));
-    });
+    setQuantity((prev) => Math.max(1, Math.min(99, prev + change)));
   };
 
   if (loading) {
     return (
       <div>
-        <Header />
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Загрузка...
         </div>
-        <Footer />
       </div>
     );
   }
@@ -71,11 +141,10 @@ export const Product: React.FC = () => {
   if (!service) {
     return (
       <div>
-        <Header />
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
         <div className="container" style={{ padding: '120px', textAlign: 'center' }}>
           Товар не найден
         </div>
-        <Footer />
       </div>
     );
   }
@@ -87,13 +156,14 @@ export const Product: React.FC = () => {
     service.image_key_4,
     service.image_key_5,
   ].filter(Boolean);
-
   const MEDIA_URL = 'http://localhost:9000/djilab-products/';
 
   return (
     <div>
-      <Header />
-
+      <Header onLogout={onLogout} onAuthRequired={onAuthRequired} />
+      <div className="container" style={{ paddingTop: '20px' }}>
+        <Breadcrumbs />
+      </div>
       <main className="container">
         <div className="product-detail">
           <div className="product-gallery">
@@ -117,7 +187,6 @@ export const Product: React.FC = () => {
                   <img src={`${MEDIA_URL}${imgKey}`} alt={service.name} className="detail-img" />
                 </div>
               ))}
-
               {images.length > 1 && (
                 <>
                   <button
@@ -145,7 +214,6 @@ export const Product: React.FC = () => {
                 </>
               )}
             </div>
-
             <div className="gallery-thumbs">
               {service.video_key && (
                 <div
@@ -167,19 +235,17 @@ export const Product: React.FC = () => {
               ))}
             </div>
           </div>
-
           <div className="detail">
             <h1>{service.name}</h1>
             <div className="detail-price">{service.price} ₽</div>
-            <div className="availability">В наличии • Гарантия 24 мес. • Доставка 2–5 дней</div>
+            <div className="availability">В наличии • Гарантия 24 мес.</div>
             <ul dangerouslySetInnerHTML={{ __html: service.description }} />
-
             <div className="actions">
               <div className="quantity-control">
                 <button type="button" className="qty-minus" onClick={() => updateQuantity(-1)}>
                   −
                 </button>
-                <input type="number" id="quantity" value={quantity} min={1} max={99} readOnly />
+                <input type="number" value={quantity} min={1} max={99} readOnly />
                 <button type="button" className="qty-plus" onClick={() => updateQuantity(1)}>
                   +
                 </button>
@@ -190,9 +256,27 @@ export const Product: React.FC = () => {
             </div>
           </div>
         </div>
+        <section className="similar-services" style={{ marginTop: '80px' }}>
+          <h2 className="section-title">Похожие товары</h2>
+          {loadingSimilar ? (
+            <p style={{ textAlign: 'center', padding: '40px' }}>Загрузка похожих товаров...</p>
+          ) : similarServices.length > 0 ? (
+            <div className="products-grid">
+              {similarServices.map((similarService) => (
+                <ProductCard
+                  key={similarService.id}
+                  service={similarService}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              Похожие товары не найдены
+            </p>
+          )}
+        </section>
       </main>
-
-      <Footer />
     </div>
   );
 };
