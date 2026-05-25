@@ -440,8 +440,7 @@ body {
   min-height: clamp(500px, 70vh, 720px);
   background:
     linear-gradient(135deg, rgba(9, 113, 206, 0.85), rgba(7, 89, 163, 0.9)),
-    url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=2000') center/cover
-      no-repeat;
+    url('/hero-bg.jpg') center/cover no-repeat;
   color: white;
   display: flex;
   align-items: center;
