@@ -10,6 +10,7 @@ import {
 } from './store/slices/authSlice';
 import { loadCart, clearCart } from './store/slices/cartSlice';
 import { clearOrders } from './store/slices/ordersSlice';
+import { resetFilters as resetServicesFilters } from './store/slices/servicesSlice'; // ✅ Импортируем сброс фильтров
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Product } from './pages/Product';
@@ -66,7 +67,11 @@ function AppContent() {
     await dispatch(logoutAction());
     dispatch(clearCart());
     dispatch(clearOrders());
-    dispatch(loadCart()); // Для гостя вернёт {id: null, items_count: 0}
+    dispatch(loadCart());
+
+    localStorage.removeItem('djilab_filters');
+    dispatch(resetServicesFilters());
+
     navigate('/');
   };
 

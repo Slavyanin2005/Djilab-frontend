@@ -112,7 +112,6 @@ const cartSlice = createSlice({
           state.items = action.payload.items || [];
           state.itemsCount = action.payload.items_count;
         } else {
-          // ✅ Для гостя: явно сбрасываем
           state.draftOrder = null;
           state.items = [];
           state.itemsCount = 0;

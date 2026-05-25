@@ -5,18 +5,15 @@ import type { Service, Order, User, RegisterData, UserProfile } from '../types';
 const cache: Record<string, { data: any; timestamp: number }> = {};
 const CACHE_TTL = 120000; // 2 минуты в миллисекундах
 
-// получить из кэша или запросить
 async function cachedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
   const now = Date.now();
   const cached = cache[key];
 
-  // Если есть в кэше и не устарел то возвращаем
   if (cached && now - cached.timestamp < CACHE_TTL) {
     console.log(`CACHE HIT (frontend): ${key}`);
     return cached.data as T;
   }
 
-  // Иначе  запрос к бэкенду + сохранение в кэш
   console.log(`CACHE MISS (frontend): ${key}`);
   const data = await requestFn();
   cache[key] = { data, timestamp: now };
@@ -77,14 +74,12 @@ export const api = {
     });
   },
 
-  // КЭШИРОВАНИЕ список услуг
   getServices: async (params?: {
     search?: string;
     min_price?: string;
     max_price?: string;
     category?: string;
   }): Promise<Service[]> => {
-    // Уникальный ключ для каждого набора фильтров
     const cacheKey = `services:${JSON.stringify(params || {})}`;
 
     return cachedRequest(cacheKey, async () => {

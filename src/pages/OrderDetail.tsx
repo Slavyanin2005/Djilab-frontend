@@ -139,7 +139,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
   const availableTransitions: Record<Order['status'], Order['status'][]> = {
     draft: ['formed', 'deleted'],
     formed: ['completed', 'rejected'],
-    completed: ['formed'], // ← Теперь можно вернуть в "Сформирован"
+    completed: ['formed'],
     rejected: ['formed'],
     deleted: [],
   };

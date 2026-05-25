@@ -174,6 +174,33 @@ body {
   pointer-events: none;
 }
 
+/* ✅ ДОБАВИТЬ: Кнопка входа — идентична корзине */
+.btn-login {
+  padding: 8px 16px;
+  background: var(--dji-blue);
+  color: white;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: clamp(12px, 2vw, 14px);
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-login:hover {
+  background: var(--dji-blue-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(9, 113, 206, 0.3);
+}
+
+.btn-login:active {
+  transform: translateY(0);
+}
+
 /* Меню пользователя */
 .user-menu {
   display: flex;
@@ -222,11 +249,6 @@ body {
 .logout-btn:hover {
   color: var(--dark);
   border-color: var(--dark);
-}
-
-.btn-login {
-  padding: 8px 20px;
-  font-size: clamp(13px, 2vw, 14px);
 }
 
 /* ================= АДАПТИВНОСТЬ ХЕДЕРА ================= */
@@ -297,7 +319,7 @@ body {
   }
 
   .btn-login {
-    padding: 6px 16px;
+    padding: 6px 12px;
     font-size: 12px;
   }
 }
@@ -356,7 +378,7 @@ body {
   }
 
   .btn-login {
-    padding: 5px 12px;
+    padding: 5px 10px;
     font-size: 11px;
   }
 }
@@ -407,7 +429,7 @@ body {
   }
 
   .btn-login {
-    padding: 4px 10px;
+    padding: 4px 8px;
     font-size: 10px;
   }
 }
@@ -1531,7 +1553,7 @@ footer {
 
   .cart-summary {
     position: static;
-    order: -1;
+
     margin-bottom: var(--spacing-md);
   }
 
@@ -1624,5 +1646,47 @@ footer {
   .nav-links {
     gap: 12px;
     font-size: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .cart-grid {
+    grid-template-columns: 2fr 1fr; /* Товары шире, итог уже */
+  }
+
+  .cart-summary {
+    position: sticky; /* Кнопки "липнут" при скролле */
+    top: calc(var(--header-height) + var(--spacing-md));
+    align-self: start;
+  }
+}
+
+/* ✅ Мобильные (≤768px): блок внизу, без перемещения */
+@media (max-width: 768px) {
+  .cart-summary {
+    position: static;
+    /* order: -1;  ← УДАЛИТЬ или закомментировать, если хочешь блок внизу */
+    margin-bottom: var(--spacing-md);
+  }
+}
+
+/* ================= CART TABLE MOBILE: КРЕСТИК СПРАВА СВЕРХУ ================= */
+@media (max-width: 768px) {
+  .cart-table tbody tr {
+    position: relative; /* ← Контейнер для абсолютного позиционирования */
+  }
+
+  .remove-btn {
+    position: absolute;
+    top: 12px; /* Отступ сверху */
+    right: 12px; /* Отступ справа */
+    width: 28px;
+    height: 28px;
+    margin: 0; /* Убираем внешние отступы */
+    z-index: 10;
+  }
+
+  .remove-btn:hover {
+    background: rgba(255, 59, 48, 0.2);
   }
 }

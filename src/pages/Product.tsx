@@ -14,7 +14,7 @@ import '../index.css';
 
 interface ProductProps {
   onAuthRequired?: () => void;
-  onLogout: () => void; // ✅ Добавляем
+  onLogout: () => void;
 }
 
 export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) => {
@@ -102,7 +102,6 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) =>
   const executeAddToCart = async () => {
     if (!service) return;
     try {
-      // ✅ Передаём и serviceId, и текущее количество
       await dispatch(
         addToCart({
           serviceId: service.id,
@@ -110,7 +109,6 @@ export const Product: React.FC<ProductProps> = ({ onAuthRequired, onLogout }) =>
         })
       ).unwrap();
 
-      // Опционально: сбросить количество после успешного добавления
       setQuantity(1);
     } catch (error) {
       console.error('Failed to add to cart:', error);

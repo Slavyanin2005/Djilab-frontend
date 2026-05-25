@@ -22,7 +22,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    // ✅ ЖЁСТКАЯ ЗАЩИТА от перезагрузки
     e.preventDefault();
     e.stopPropagation();
 
@@ -39,12 +38,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           await onRegister({ username, email, password });
         }
       }
-      // ✅ Только при успехе закрываем модалку
       onSuccess();
     } catch (err: any) {
       console.log('🔍 Auth error:', err, 'type:', typeof err);
 
-      // ✅ Извлекаем сообщение (строка от .unwrap())
       let message = 'Ошибка авторизации';
 
       if (typeof err === 'string') {
@@ -60,13 +57,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
 
       setError(message);
-      // ✅ Критично: прерываем выполнение, не вызываем onSuccess()
       return false;
     } finally {
       setLoading(false);
     }
 
-    // ✅ Явно возвращаем false, чтобы браузер не сабмитил форму
     return false;
   };
 
@@ -78,10 +73,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </button>
         <h2 style={styles.title}>{isLogin ? 'Вход в систему' : 'Регистрация'}</h2>
 
-        {/* ✅ Красное окошко с ошибкой */}
         {error && <div style={styles.error}>{error}</div>}
 
-        {/* ✅ noValidate отключает встроенную валидацию браузера */}
         <form onSubmit={handleSubmit} style={styles.form} noValidate>
           <input
             type="text"

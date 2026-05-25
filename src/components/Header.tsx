@@ -68,7 +68,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, onAuthRequired }) => {
                 </button>
               </div>
             ) : (
-              <button onClick={() => onAuthRequired?.()} className="btn-primary btn-login">
+              /* ✅ Исправлено: кнопка входа теперь использует класс btn-login */
+              <button onClick={() => onAuthRequired?.()} className="btn-login">
                 Войти
               </button>
             )}

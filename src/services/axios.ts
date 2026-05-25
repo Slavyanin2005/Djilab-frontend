@@ -2,14 +2,13 @@
 import axios from 'axios';
 
 export const axiosInstance = axios.create({
-  baseURL: '/api', // ← Проксируется через Vite
-  withCredentials: true, // ✅ Обязательно для сессий
+  baseURL: '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// CSRF интерцептор
 axiosInstance.interceptors.request.use((config) => {
   const csrfToken = document.cookie
     .split('; ')

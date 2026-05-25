@@ -140,13 +140,11 @@ const ordersSlice = createSlice({
       .addCase(updateOrderStatus.fulfilled, (state, action) => {
         state.loading = false;
 
-        // ✅ Обновляем в списке заявок
         const idx = state.orders.findIndex((o) => o.id === action.payload.id);
         if (idx !== -1) {
           state.orders[idx] = action.payload;
         }
 
-        // ✅ Обновляем currentOrder через Object.assign (для корректной работы с Immer)
         if (state.currentOrder && state.currentOrder.id === action.payload.id) {
           Object.assign(state.currentOrder, action.payload);
         }
@@ -156,13 +154,10 @@ const ordersSlice = createSlice({
         state.error = action.payload as string;
       })
       .addCase(addOrderComment.fulfilled, (state, action) => {
-        // ✅ Обновляем в списке заявок
         const idx = state.orders.findIndex((o) => o.id === action.payload.id);
         if (idx !== -1) {
           state.orders[idx] = action.payload;
         }
-
-        // ✅ Обновляем currentOrder через Object.assign (для консистентности)
         if (state.currentOrder && state.currentOrder.id === action.payload.id) {
           Object.assign(state.currentOrder, action.payload);
         }

@@ -21,7 +21,6 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
 
   useEffect(() => {
     if (draftOrder) {
-      // Опционально: можно сбросить локальные флаги
     }
   }, [draftOrder]);
 
@@ -232,14 +231,14 @@ export const Cart: React.FC<CartProps> = ({ onAuthRequired, onLogout }) => {
                     className="checkout-btn"
                     style={{ background: 'var(--success)' }}
                   >
-                    ✅ Оформить заказ
+                    Оформить заказ
                   </button>
                   <button
                     onClick={handleDeleteOrder}
                     className="checkout-btn"
                     style={{ background: 'var(--error)' }}
                   >
-                    🗑️ Удалить заявку
+                    Удалить заявку
                   </button>
                 </div>
                 <p className="secure-note">🔒 Безопасное оформление</p>

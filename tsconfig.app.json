@@ -16,14 +16,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Paths для алиаса @ */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
-
-    /* Отключение предупреждения о депрекейте baseUrl */
-    "ignoreDeprecations": "6.0",
 
     /* Linting */
     "strict": true,

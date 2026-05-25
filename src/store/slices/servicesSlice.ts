@@ -1,4 +1,3 @@
-// src/store/slices/servicesSlice.ts
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import { api } from '../../services/api';
 import type { Service } from '../../types';
@@ -15,19 +14,38 @@ export interface ServicesState {
   };
 }
 
-const initialState: ServicesState = {
-  services: [],
-  loading: false,
-  error: null,
-  filters: {
+const loadFiltersFromStorage = (): ServicesState['filters'] => {
+  try {
+    const stored = localStorage.getItem('djilab_filters');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('Failed to load filters from localStorage:', e);
+  }
+  return {
     search: '',
     minPrice: '',
     maxPrice: '',
     category: '',
-  },
+  };
 };
 
-// Async thunk для загрузки услуг
+const saveFiltersToStorage = (filters: ServicesState['filters']) => {
+  try {
+    localStorage.setItem('djilab_filters', JSON.stringify(filters));
+  } catch (e) {
+    console.warn('Failed to save filters to localStorage:', e);
+  }
+};
+
+const initialState: ServicesState = {
+  services: [],
+  loading: false,
+  error: null,
+  filters: loadFiltersFromStorage(),
+};
+
 export const fetchServices = createAsyncThunk<
   Service[],
   void,
@@ -48,15 +66,19 @@ const servicesSlice = createSlice({
   reducers: {
     setSearch: (state, action: PayloadAction<string>) => {
       state.filters.search = action.payload;
+      saveFiltersToStorage(state.filters); // ✅ Сохраняем при изменении
     },
     setMinPrice: (state, action: PayloadAction<string>) => {
       state.filters.minPrice = action.payload;
+      saveFiltersToStorage(state.filters);
     },
     setMaxPrice: (state, action: PayloadAction<string>) => {
       state.filters.maxPrice = action.payload;
+      saveFiltersToStorage(state.filters);
     },
     setCategory: (state, action: PayloadAction<string>) => {
       state.filters.category = action.payload;
+      saveFiltersToStorage(state.filters);
     },
     resetFilters: (state) => {
       state.filters = {
@@ -65,6 +87,7 @@ const servicesSlice = createSlice({
         maxPrice: '',
         category: '',
       };
+      saveFiltersToStorage(state.filters);
     },
   },
   extraReducers: (builder) => {

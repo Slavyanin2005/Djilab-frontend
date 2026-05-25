@@ -23,7 +23,6 @@ export const OrdersHistory: React.FC = () => {
   }, [dispatch, user]);
 
   useEffect(() => {
-    // Запускаем polling только если пользователь — модератор
     if (user?.is_staff) {
       dispatch(fetchOrders());
 

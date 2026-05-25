@@ -16,7 +16,6 @@ export interface Service {
   updated_at: string;
 }
 
-// ✅ Новый интерфейс для регистрации
 export interface RegisterData {
   username: string;
   password: string;

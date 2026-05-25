@@ -34,14 +34,12 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Загрузка профиля при монтировании
   useEffect(() => {
     if (user) {
       dispatch(fetchUserProfile());
     }
   }, [dispatch, user]);
 
-  // Заполнение формы данными профиля
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -52,7 +50,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
     }
   }, [profile]);
 
-  // Если пользователь не авторизован — редирект на вход
   if (!user) {
     onAuthRequired?.();
     return null;
@@ -106,7 +103,7 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
           newPassword: passwordData.newPassword,
         })
       ).unwrap();
-      setPasswordSuccess('✅ Пароль успешно изменён');
+      setPasswordSuccess('Пароль успешно изменён');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error: any) {
       setPasswordError(error.message || 'Ошибка при смене пароля');
@@ -147,7 +144,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
               gap: '32px',
             }}
           >
-            {/* Карточка: Информация о пользователе */}
             <section style={styles.section}>
               <h2 style={styles.sectionTitle}>👤 Информация о пользователе</h2>
               <div style={styles.infoGrid}>
@@ -168,7 +164,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
               </div>
             </section>
 
-            {/* Карточка: Контактные данные */}
             <section style={styles.section}>
               <div
                 style={{
@@ -277,7 +272,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
               )}
             </section>
 
-            {/* Карточка: Смена пароля */}
             <section style={styles.section}>
               <h2 style={styles.sectionTitle}>🔐 Смена пароля</h2>
               <form onSubmit={handleChangePassword} style={styles.form}>
@@ -338,7 +332,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
             {/* Карточка: Выход */}
             <section style={{ ...styles.section, textAlign: 'center' }}>
               <button
-                // ✅ ИСПРАВЛЕНО: только onLogout — он уже делает редирект через window.location.href
                 onClick={onLogout}
                 className="btn-secondary"
                 style={{
@@ -359,7 +352,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
   );
 };
 
-// Стили в том же стиле, что и у сайта
 const styles: Record<string, React.CSSProperties> = {
   section: {
     background: 'var(--bg-alt)',
