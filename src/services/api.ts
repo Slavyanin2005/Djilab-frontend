@@ -2,20 +2,17 @@ import { axiosInstance } from './axios';
 import type { Service, Order, User, RegisterData, UserProfile } from '../types';
 import { MOCK_SERVICES } from '../mocks/services';
 
-// Простой кэш в памяти: ключ → { данные, время_сохранения }
 const cache: Record<string, { data: any; timestamp: number }> = {};
-const CACHE_TTL = 120000; // 2 минуты в миллисекундах
+const CACHE_TTL = 120000;
 
 async function cachedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
   const now = Date.now();
   const cached = cache[key];
 
   if (cached && now - cached.timestamp < CACHE_TTL) {
-    console.log(`CACHE HIT (frontend): ${key}`);
     return cached.data as T;
   }
 
-  console.log(`CACHE MISS (frontend): ${key}`);
   const data = await requestFn();
   cache[key] = { data, timestamp: now };
   return data;
@@ -37,14 +34,48 @@ const isNetworkError = (error: any): boolean => {
 export const api = {
   login: async (username: string, password: string): Promise<User> => {
     try {
-      const { data } = await axiosInstance.post<User>('/profiles/login/', {
+      const response = await axiosInstance.post<{
+        message?: string;
+        username?: string;
+        id?: number;
+        is_staff?: boolean;
+        csrfToken?: string;
+      }>('/profiles/login/', {
         username,
         password,
       });
-      return data;
+
+      const { data } = response;
+
+      // Гарантированно сохраняем токен из ответа
+      if (data.csrfToken) {
+        localStorage.setItem('csrftoken', data.csrfToken);
+        console.log(
+          '[api] Saved csrfToken to localStorage:',
+          data.csrfToken.substring(0, 10) + '...'
+        );
+      }
+
+      // Также пробуем сохранить из заголовков (на всякий случай)
+      const setCookie = response.headers?.['set-cookie'];
+      if (setCookie) {
+        const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
+        for (const cookie of cookies) {
+          if (cookie.startsWith('csrftoken=')) {
+            const token = cookie.split(';')[0].split('=')[1];
+            if (token) {
+              localStorage.setItem('csrftoken', token);
+              console.log('[api] Saved csrfToken from set-cookie header');
+            }
+            break;
+          }
+        }
+      }
+
+      const { csrfToken, ...userData } = data;
+      return userData as User;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock login');
         await delay();
         return {
           id: 1,
@@ -63,7 +94,6 @@ export const api = {
       return res;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock register');
         await delay();
         return {
           id: Date.now(),
@@ -83,7 +113,6 @@ export const api = {
       if (!isNetworkError(error)) {
         throw error;
       }
-      console.warn('⚠️ Backend unavailable, mock logout');
     }
   },
 
@@ -96,7 +125,6 @@ export const api = {
         return null;
       }
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock user');
         await delay();
         return {
           id: 1,
@@ -105,7 +133,6 @@ export const api = {
           is_staff: false,
         };
       }
-      console.warn('Auth check failed:', error.message);
       return null;
     }
   },
@@ -116,7 +143,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock profile');
         await delay();
         return {
           id: 1,
@@ -143,7 +169,6 @@ export const api = {
       return res;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock profile update');
         await delay();
         return {
           id: 1,
@@ -172,7 +197,6 @@ export const api = {
       if (!isNetworkError(error)) {
         throw error;
       }
-      console.warn('⚠️ Backend unavailable, mock password change');
     }
   },
 
@@ -190,10 +214,8 @@ export const api = {
         return data;
       } catch (error: any) {
         if (isNetworkError(error)) {
-          console.warn('⚠️ Backend unavailable, using mock services');
           await delay();
 
-          // Применяем фильтрацию к mock-данным
           let filtered = [...MOCK_SERVICES];
 
           if (params?.search) {
@@ -218,7 +240,6 @@ export const api = {
             filtered = filtered.filter((s) => s.category === params.category);
           }
 
-          console.log(`MOCK: Found ${filtered.length} services`);
           return filtered;
         }
         throw error;
@@ -232,7 +253,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn(`⚠️ Backend unavailable, using mock service ${id}`);
         await delay();
         const service = MOCK_SERVICES.find((s) => s.id === id);
         if (!service) {
@@ -252,7 +272,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock similar services');
         await delay();
         const others = MOCK_SERVICES.filter((s) => s.id !== id);
         return others.sort(() => 0.5 - Math.random()).slice(0, limit);
@@ -267,7 +286,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock cart icon');
         await delay();
         return { id: null, items_count: 0 };
       }
@@ -283,7 +301,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock add to order');
         await delay();
         const service = MOCK_SERVICES.find((s) => s.id === serviceId);
         if (!service) {
@@ -336,7 +353,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock orders');
         await delay();
         return [];
       }
@@ -350,7 +366,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, using mock order');
         await delay();
         throw new Error('Order not found in mock data');
       }
@@ -367,7 +382,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock update order item');
         await delay();
         throw new Error('Not implemented in mock mode');
       }
@@ -381,7 +395,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock remove item');
         await delay();
         throw new Error('Not implemented in mock mode');
       }
@@ -395,7 +408,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock delete order');
         await delay();
         throw new Error('Not implemented in mock mode');
       }
@@ -409,7 +421,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock form order');
         await delay();
         throw new Error('Not implemented in mock mode');
       }
@@ -426,7 +437,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock change status');
         await delay();
         throw new Error('Not implemented in mock mode');
       }
@@ -440,7 +450,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock add comment');
         await delay();
         throw new Error('Not implemented in mock mode');
       }
@@ -454,7 +463,6 @@ export const api = {
       return data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        console.warn('⚠️ Backend unavailable, mock order details');
         await delay();
         throw new Error('Order not found in mock data');
       }

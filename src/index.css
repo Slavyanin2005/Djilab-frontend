@@ -1,6 +1,5 @@
 /* src/index.css */
 :root {
-  /* Цвета */
   --dji-blue: #0971ce;
   --dji-blue-dark: #0759a3;
   --dji-blue-light: #e6f2ff;
@@ -16,13 +15,11 @@
   --warning: #ff9500;
   --error: #ff3b30;
 
-  /* Эффекты */
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   --shadow-hover: 0 8px 30px rgba(9, 113, 206, 0.15);
   --radius: 12px;
   --radius-lg: 20px;
 
-  /* Базовые размеры (будут уменьшаться на мобильных) */
   --font-base: clamp(14px, 2vw, 16px);
   --font-lg: clamp(1.1rem, 2.5vw, 1.5rem);
   --font-xl: clamp(1.5rem, 4vw, 3rem);
@@ -59,7 +56,6 @@ body {
   width: 100%;
 }
 
-/* ================= HEADER ================= */
 .header {
   position: fixed;
   top: 0;
@@ -146,7 +142,6 @@ body {
   width: 100%;
 }
 
-/* Кнопка корзины */
 .cart-btn {
   padding: 8px 16px;
   background: var(--dark);
@@ -174,7 +169,6 @@ body {
   pointer-events: none;
 }
 
-/* ✅ ДОБАВИТЬ: Кнопка входа — идентична корзине */
 .btn-login {
   padding: 8px 16px;
   background: var(--dji-blue);
@@ -201,7 +195,6 @@ body {
   transform: translateY(0);
 }
 
-/* Меню пользователя */
 .user-menu {
   display: flex;
   align-items: center;
@@ -251,9 +244,6 @@ body {
   border-color: var(--dark);
 }
 
-/* ================= АДАПТИВНОСТЬ ХЕДЕРА ================= */
-
-/* Планшеты (≤1024px) */
 @media (max-width: 1024px) {
   :root {
     --header-height: 60px;
@@ -273,7 +263,6 @@ body {
   }
 }
 
-/* Мобильные (≤768px) */
 @media (max-width: 768px) {
   :root {
     --header-height: 56px;
@@ -324,7 +313,6 @@ body {
   }
 }
 
-/* Очень маленькие экраны (≤480px) */
 @media (max-width: 480px) {
   :root {
     --header-height: 52px;
@@ -383,7 +371,6 @@ body {
   }
 }
 
-/* Экстремально маленькие (≤375px) */
 @media (max-width: 375px) {
   :root {
     --header-height: 48px;
@@ -434,7 +421,6 @@ body {
   }
 }
 
-/* ================= HERO ================= */
 .hero {
   height: 90vh;
   min-height: clamp(500px, 70vh, 720px);
@@ -484,7 +470,6 @@ body {
   font-weight: 400;
 }
 
-/* ================= BUTTONS ================= */
 .btn-primary {
   padding: clamp(12px, 3vw, 16px) clamp(32px, 6vw, 48px);
   background: var(--dji-blue);
@@ -531,7 +516,6 @@ body {
   border-color: white;
 }
 
-/* ================= SECTIONS ================= */
 .section-title {
   font-size: var(--font-xl);
   font-weight: 800;
@@ -545,7 +529,6 @@ body {
   color: var(--dji-blue);
 }
 
-/* ================= PRODUCTS GRID ================= */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 90vw, 320px), 1fr));
@@ -633,7 +616,6 @@ body {
   transform: translateY(0);
 }
 
-/* ================= PRODUCT DETAIL ================= */
 .product-detail {
   padding: var(--spacing-lg) 0 var(--spacing-xl);
   display: grid;
@@ -726,7 +708,6 @@ body {
   margin: 0;
 }
 
-/* ================= PRODUCT GALLERY ================= */
 .product-gallery {
   position: relative;
   width: 100%;
@@ -860,7 +841,6 @@ body {
   }
 }
 
-/* ================= CART PAGE ================= */
 .cart-page {
   padding: clamp(60px, 15vw, 80px) 0 var(--spacing-xl);
   text-align: center;
@@ -1149,7 +1129,6 @@ body {
   gap: 6px;
 }
 
-/* ================= FOOTER ================= */
 footer {
   background: var(--dark);
   color: #ccc;
@@ -1195,7 +1174,6 @@ footer {
   color: #888;
 }
 
-/* ================= SEARCH & FILTERS ================= */
 .search-wrapper {
   max-width: 680px;
   margin: 0 auto var(--spacing-lg);
@@ -1351,7 +1329,6 @@ footer {
   font-size: clamp(0.85rem, 2vw, 0.9rem);
 }
 
-/* ================= BREADCRUMBS ================= */
 .breadcrumbs {
   padding: calc(var(--header-height) + var(--spacing-sm)) 0 clamp(2px, 1vw, 4px);
   margin-bottom: 0;
@@ -1394,7 +1371,6 @@ footer {
   white-space: nowrap;
 }
 
-/* ================= ORDER STATUS ================= */
 .order-status {
   display: inline-block;
   padding: clamp(2px, 1vw, 4px) clamp(8px, 2vw, 12px);
@@ -1428,7 +1404,6 @@ footer {
   color: white;
 }
 
-/* ================= UTILITY CLASSES ================= */
 .text-blue {
   color: var(--dji-blue);
 }
@@ -1458,9 +1433,6 @@ footer {
   animation-delay: calc(var(--i, 0) * 0.1s);
 }
 
-/* ================= MEDIA QUERIES ================= */
-
-/* Планшеты и меньше (≤1024px) */
 @media (max-width: 1024px) {
   :root {
     --header-height: 64px;
@@ -1476,7 +1448,6 @@ footer {
   }
 }
 
-/* Мобильные (≤768px) */
 @media (max-width: 768px) {
   :root {
     --header-height: 56px;
@@ -1650,38 +1621,35 @@ footer {
 
 @media (min-width: 1024px) {
   .cart-grid {
-    grid-template-columns: 2fr 1fr; /* Товары шире, итог уже */
+    grid-template-columns: 2fr 1fr;
   }
 
   .cart-summary {
-    position: sticky; /* Кнопки "липнут" при скролле */
+    position: sticky;
     top: calc(var(--header-height) + var(--spacing-md));
     align-self: start;
   }
 }
 
-/* ✅ Мобильные (≤768px): блок внизу, без перемещения */
 @media (max-width: 768px) {
   .cart-summary {
     position: static;
-    /* order: -1;  ← УДАЛИТЬ или закомментировать, если хочешь блок внизу */
     margin-bottom: var(--spacing-md);
   }
 }
 
-/* ================= CART TABLE MOBILE: КРЕСТИК СПРАВА СВЕРХУ ================= */
 @media (max-width: 768px) {
   .cart-table tbody tr {
-    position: relative; /* ← Контейнер для абсолютного позиционирования */
+    position: relative;
   }
 
   .remove-btn {
     position: absolute;
-    top: 12px; /* Отступ сверху */
-    right: 12px; /* Отступ справа */
+    top: 12px;
+    right: 12px;
     width: 28px;
     height: 28px;
-    margin: 0; /* Убираем внешние отступы */
+    margin: 0;
     z-index: 10;
   }
 

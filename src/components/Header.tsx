@@ -21,7 +21,6 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, onAuthRequired }) => {
     <header className="header">
       <div className="container">
         <nav className="nav">
-          {/* Левая часть: лого + навигация */}
           <div className="nav-left">
             <Link to="/" className="logo">
               DJI<span>Lab</span>
@@ -32,9 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, onAuthRequired }) => {
             </div>
           </div>
 
-          {/* Правая часть: корзина + пользователь */}
           <div className="nav-right">
-            {/* Кнопка корзины */}
             <Link
               to="/cart"
               className={`cart-btn ${!hasDraftOrder ? 'cart-btn-disabled' : ''}`}
@@ -57,7 +54,6 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, onAuthRequired }) => {
               Корзина ({itemsCount})
             </Link>
 
-            {/* Пользователь или кнопка входа */}
             {user ? (
               <div className="user-menu">
                 <Link to="/profile" className="user-link">
@@ -68,7 +64,6 @@ export const Header: React.FC<HeaderProps> = ({ onLogout, onAuthRequired }) => {
                 </button>
               </div>
             ) : (
-              /* ✅ Исправлено: кнопка входа теперь использует класс btn-login */
               <button onClick={() => onAuthRequired?.()} className="btn-login">
                 Войти
               </button>

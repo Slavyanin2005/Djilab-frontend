@@ -2,21 +2,23 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "DJI Lab",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.djilab.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build -- --mode tauri"
   },
   "app": {
     "windows": [
       {
         "title": "DJI Lab",
-        "width": 800,
-        "height": 600,
+        "width": 1280,
+        "height": 800,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "devtools": true,
+        "additionalBrowserArgs": "--ignore-certificate-errors"
       }
     ],
     "security": {
@@ -32,9 +34,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
-    }
+    ]
   }
 }

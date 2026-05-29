@@ -145,7 +145,7 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
             }}
           >
             <section style={styles.section}>
-              <h2 style={styles.sectionTitle}>👤 Информация о пользователе</h2>
+              <h2 style={styles.sectionTitle}>Информация о пользователе</h2>
               <div style={styles.infoGrid}>
                 <div>
                   <label style={styles.label}>Имя пользователя</label>
@@ -173,14 +173,31 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                   marginBottom: '20px',
                 }}
               >
-                <h2 style={{ ...styles.sectionTitle, marginBottom: 0 }}>📋 Контактные данные</h2>
+                <h2 style={{ ...styles.sectionTitle, marginBottom: 0 }}>Контактные данные</h2>
                 {!isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
                     className="btn-secondary"
-                    style={{ padding: '8px 20px', fontSize: '0.9rem' }}
+                    style={{
+                      padding: '6px 16px', // ← Уменьшили с 8px 20px
+                      fontSize: '0.85rem', // ← Чуть меньше шрифт
+                      color: '#000',
+                      border: '2px solid #000',
+                      background: 'transparent',
+                      borderRadius: 'var(--radius)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#000';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#000';
+                    }}
                   >
-                    ✏️ Редактировать
+                    Редактировать
                   </button>
                 )}
               </div>
@@ -212,18 +229,6 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                         disabled={isSubmitting}
                       />
                     </div>
-                    <div>
-                      <label style={styles.label}>Должность</label>
-                      <input
-                        type="text"
-                        name="position"
-                        value={formData.position}
-                        onChange={handleInputChange}
-                        style={styles.input}
-                        placeholder="Ваша должность"
-                        disabled={isSubmitting}
-                      />
-                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                     <button
@@ -232,7 +237,7 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                       style={{ padding: '12px 32px' }}
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Сохранение...' : '💾 Сохранить'}
+                      {isSubmitting ? 'Сохранение...' : 'Сохранить'}
                     </button>
                     <button
                       type="button"
@@ -247,10 +252,26 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                         }
                       }}
                       className="btn-secondary"
-                      style={{ padding: '12px 32px' }}
+                      style={{
+                        padding: '12px 32px',
+                        color: '#000', // ← Чёрный текст
+                        border: '2px solid #000', // ← Чёрная рамка
+                        background: 'transparent', // ← Прозрачный фон
+                        borderRadius: 'var(--radius)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#000';
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = '#000';
+                      }}
                       disabled={isSubmitting}
                     >
-                      ✕ Отмена
+                      Отмена
                     </button>
                   </div>
                 </form>
@@ -264,16 +285,12 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                     <label style={styles.label}>Компания</label>
                     <p style={styles.value}>{profile?.company || 'Не указана'}</p>
                   </div>
-                  <div>
-                    <label style={styles.label}>Должность</label>
-                    <p style={styles.value}>{profile?.position || 'Не указана'}</p>
-                  </div>
                 </div>
               )}
             </section>
 
             <section style={styles.section}>
-              <h2 style={styles.sectionTitle}>🔐 Смена пароля</h2>
+              <h2 style={styles.sectionTitle}>Смена пароля</h2>
               <form onSubmit={handleChangePassword} style={styles.form}>
                 <div style={styles.formGrid}>
                   <div>
@@ -321,10 +338,10 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                 <button
                   type="submit"
                   className="btn-primary"
-                  style={{ padding: '12px 32px', marginTop: '16px', width: 'fit-content' }}
+                  style={{ padding: '12px 32px', marginTop: '16px', alignSelf: 'center' }}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Изменение...' : '🔄 Изменить пароль'}
+                  {isSubmitting ? 'Изменение...' : 'Изменить пароль'}
                 </button>
               </form>
             </section>
@@ -342,7 +359,7 @@ export const Profile: React.FC<ProfileProps> = ({ onAuthRequired, onLogout }) =>
                   border: 'none',
                 }}
               >
-                🚪 Выйти из аккаунта
+                Выйти из аккаунта
               </button>
             </section>
           </div>
