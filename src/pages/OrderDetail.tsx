@@ -15,9 +15,11 @@ import '../index.css';
 
 interface OrderDetailProps {
   onAuthRequired?: () => void;
+  onLogout: () => void; // ← Добавили проп onLogout
 }
 
-export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
+export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogout }) => {
+  // ← Деструктуризируем onLogout
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -36,32 +38,12 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     };
   }, [dispatch, id]);
 
-  const isModerator = user?.is_staff;
-  const isCreator = currentOrder?.creator?.id === user?.id;
-
-  if (!isModerator && !isCreator) {
-    return (
-      <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
-        <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
-          <h2>🔒 Доступ запрещён</h2>
-          <p>Вы не можете просматривать эту заявку</p>
-          <Link
-            to="/orders/history"
-            className="btn-primary"
-            style={{ marginTop: '20px', display: 'inline-block' }}
-          >
-            ← Вернуться к списку
-          </Link>
-        </main>
-      </div>
-    );
-  }
-
+  // ✅ 1. Сначала показываем загрузку
   if (loading && !currentOrder) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
+        пропсов
         <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
           Загрузка...
         </main>
@@ -69,10 +51,12 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     );
   }
 
+  // ✅ 2. Потом проверяем ошибку
   if (error || !currentOrder) {
     return (
       <div>
-        <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
+        пропсов
         <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
           <h2>❌ Ошибка</h2>
           <p>{error || 'Заявка не найдена'}</p>
@@ -88,6 +72,31 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     );
   }
 
+  // ✅ 3. ТЕПЕРЬ проверяем права (когда currentOrder уже есть!)
+  const isModerator = user?.is_staff;
+  const isCreator = currentOrder?.creator?.id === user?.id;
+
+  if (!isModerator && !isCreator) {
+    return (
+      <div>
+        <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
+        пропсов
+        <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
+          <h2>🔒 Доступ запрещён</h2>
+          <p>Вы не можете просматривать эту заявку</p>
+          <Link
+            to="/orders/history"
+            className="btn-primary"
+            style={{ marginTop: '20px', display: 'inline-block' }}
+          >
+            ← Вернуться к списку
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
+  // ✅ 4. Обработчики
   const handleStatusChange = async (newStatus: Order['status']) => {
     setIsSubmitting(true);
     try {
@@ -191,14 +200,14 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
     );
   };
 
+  // ✅ 5. Рендер контента
   return (
     <div>
-      <Header onLogout={() => {}} onAuthRequired={onAuthRequired} />
-
+      <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
+      пропсов
       <div className="container" style={{ paddingTop: '20px' }}>
         <Breadcrumbs />
       </div>
-
       <main className="container" style={{ padding: '40px 0 100px' }}>
         <div
           style={{
@@ -252,7 +261,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
                 border: '1px solid var(--border)',
               }}
             >
-              <h3 style={{ marginBottom: '20px', fontSize: '1.3rem' }}>📦 Товары в заявке</h3>
+              <h3 style={{ marginBottom: '20px', fontSize: '1.3rem' }}>Товары в заявке</h3>
               {currentOrder.items.length > 0 ? (
                 <table className="cart-table">
                   <thead>
@@ -362,7 +371,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
                 top: '96px',
               }}
             >
-              <h3 style={{ marginBottom: '20px', fontSize: '1.3rem' }}>⚙️ Управление</h3>
+              <h3 style={{ marginBottom: '20px', fontSize: '1.3rem' }}>Управление</h3>
 
               <div
                 style={{
@@ -420,7 +429,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired }) => {
                           !isSubmitting && (e.currentTarget.style.transform = 'translateY(0)')
                         }
                       >
-                        → {getStatusLabel(status)}
+                        {getStatusLabel(status)}
                       </button>
                     ))}
                     {availableTransitions[currentOrder.status].length === 0 && (

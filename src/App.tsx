@@ -120,7 +120,10 @@ function AppContent() {
           element={<Product onAuthRequired={handleAuthRequired} onLogout={handleLogout} />}
         />
         <Route path="/orders/history" element={<OrdersHistory />} />
-        <Route path="/orders/:id" element={<OrderDetail onAuthRequired={handleAuthRequired} />} />
+        <Route
+          path="/orders/:id"
+          element={<OrderDetail onAuthRequired={handleAuthRequired} onLogout={handleLogout} />}
+        />
         <Route path="/profile" element={<Profile onLogout={handleLogout} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
