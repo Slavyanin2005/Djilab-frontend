@@ -15,11 +15,10 @@ import '../index.css';
 
 interface OrderDetailProps {
   onAuthRequired?: () => void;
-  onLogout: () => void; // ← Добавили проп onLogout
+  onLogout: () => void;
 }
 
 export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogout }) => {
-  // ← Деструктуризируем onLogout
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -38,7 +37,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogo
     };
   }, [dispatch, id]);
 
-  // ✅ 1. Сначала показываем загрузку
   if (loading && !currentOrder) {
     return (
       <div>
@@ -51,14 +49,13 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogo
     );
   }
 
-  // ✅ 2. Потом проверяем ошибку
   if (error || !currentOrder) {
     return (
       <div>
         <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
         пропсов
         <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
-          <h2>❌ Ошибка</h2>
+          <h2>Ошибка</h2>
           <p>{error || 'Заявка не найдена'}</p>
           <Link
             to="/orders/history"
@@ -72,7 +69,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogo
     );
   }
 
-  // ✅ 3. ТЕПЕРЬ проверяем права (когда currentOrder уже есть!)
   const isModerator = user?.is_staff;
   const isCreator = currentOrder?.creator?.id === user?.id;
 
@@ -82,7 +78,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogo
         <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
         пропсов
         <main className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
-          <h2>🔒 Доступ запрещён</h2>
+          <h2>Доступ запрещён</h2>
           <p>Вы не можете просматривать эту заявку</p>
           <Link
             to="/orders/history"
@@ -96,7 +92,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogo
     );
   }
 
-  // ✅ 4. Обработчики
   const handleStatusChange = async (newStatus: Order['status']) => {
     setIsSubmitting(true);
     try {
@@ -200,7 +195,6 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ onAuthRequired, onLogo
     );
   };
 
-  // ✅ 5. Рендер контента
   return (
     <div>
       <Header onLogout={onLogout} onAuthRequired={onAuthRequired} /> // ← Используем onLogout из
